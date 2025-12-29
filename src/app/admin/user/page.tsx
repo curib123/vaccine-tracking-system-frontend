@@ -56,7 +56,7 @@ export default function UserManagementPage() {
   const fetchRoles = async () => {
     const res = await fetch(`${API_BASE}/roles/getAllRoles`);
     const json = await res.json();
-    setRoles(json.data);
+    setRoles(json.data || []);
   };
 
   const fetchUsers = async (page: number) => {
@@ -64,7 +64,7 @@ export default function UserManagementPage() {
       `${API_BASE}/user/getAllUsers?page=${page}&limit=${pagination.limit}`
     );
     const json = await res.json();
-    setUsers(json.data);
+    setUsers(json.data || []);
     setPagination(json.pagination);
   };
 
@@ -77,7 +77,7 @@ export default function UserManagementPage() {
 
   /* ================= UI ================= */
   return (
-    <div className=" bg-slate-50 p-6 space-y-10">
+    <div className="bg-slate-50 p-6 space-y-10">
 
       {/* HEADER */}
       <header>
@@ -89,12 +89,17 @@ export default function UserManagementPage() {
         </p>
       </header>
 
-      {/* ================= ROLES TABLE ================= */}
+      {/* ================= ROLES ================= */}
       <section className="bg-white rounded-2xl shadow">
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="text-lg font-semibold text-slate-700">Roles</h2>
-          <button className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600
-            hover:bg-blue-600 hover:text-white transition font-medium">
+          <button className="
+            px-4 py-2 rounded-lg
+            bg-blue-600 text-white
+            border border-blue-600
+            hover:bg-transparent hover:text-blue-600
+            transition font-medium
+          ">
             Create Role
           </button>
         </div>
@@ -115,12 +120,22 @@ export default function UserManagementPage() {
                   {role.description}
                 </td>
                 <td className="px-6 py-4 text-right space-x-2">
-                  <button className="px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600
-                    hover:bg-blue-600 hover:text-white transition">
+                  <button className="
+                    px-3 py-1.5 rounded-lg
+                    bg-blue-600 text-white
+                    border border-blue-600
+                    hover:bg-transparent hover:text-blue-600
+                    transition
+                  ">
                     Edit
                   </button>
-                  <button className="px-3 py-1.5 rounded-lg border border-red-600 text-red-600
-                    hover:bg-red-600 hover:text-white transition">
+                  <button className="
+                    px-3 py-1.5 rounded-lg
+                    bg-red-600 text-white
+                    border border-red-600
+                    hover:bg-transparent hover:text-red-600
+                    transition
+                  ">
                     Remove
                   </button>
                 </td>
@@ -130,12 +145,17 @@ export default function UserManagementPage() {
         </table>
       </section>
 
-      {/* ================= USERS TABLE ================= */}
+      {/* ================= USERS ================= */}
       <section className="bg-white rounded-2xl shadow">
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="text-lg font-semibold text-slate-700">Users</h2>
-          <button className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600
-            hover:bg-blue-600 hover:text-white transition font-medium">
+          <button className="
+            px-4 py-2 rounded-lg
+            bg-blue-600 text-white
+            border border-blue-600
+            hover:bg-transparent hover:text-blue-600
+            transition font-medium
+          ">
             Create User
           </button>
         </div>
@@ -167,21 +187,19 @@ export default function UserManagementPage() {
                   <td className="px-4 py-3 text-slate-600">{u.contactNo}</td>
                   <td className="px-4 py-3 text-slate-600">{u.address}</td>
 
-                  {/* ✅ ROLE NAME */}
                   <td className="px-4 py-3">
                     <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
                       {u.roleName}
                     </span>
                   </td>
 
-                  {/* STATUS */}
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => toggleStatus(u.id)}
                       className={`px-4 py-1.5 rounded-full text-xs font-semibold transition
                         ${u.isActive
-                          ? 'border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'
-                          : 'border border-slate-400 text-slate-500 hover:bg-slate-400 hover:text-white'
+                          ? 'bg-blue-600 text-white border border-blue-600 hover:bg-transparent hover:text-blue-600'
+                          : 'bg-slate-400 text-white border border-slate-400 hover:bg-transparent hover:text-slate-500'
                         }`}
                     >
                       {u.isActive ? 'Active' : 'Inactive'}
@@ -193,16 +211,31 @@ export default function UserManagementPage() {
                   </td>
 
                   <td className="px-4 py-3 text-right space-x-2">
-                    <button className="px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600
-                      hover:bg-blue-600 hover:text-white transition">
+                    <button className="
+                      px-3 py-1.5 rounded-lg
+                      bg-blue-600 text-white
+                      border border-blue-600
+                      hover:bg-transparent hover:text-blue-600
+                      transition
+                    ">
                       Edit
                     </button>
-                    <button className="px-3 py-1.5 rounded-lg border border-indigo-600 text-indigo-600
-                      hover:bg-indigo-600 hover:text-white transition">
+                    <button className="
+                      px-3 py-1.5 rounded-lg
+                      bg-indigo-600 text-white
+                      border border-indigo-600
+                      hover:bg-transparent hover:text-indigo-600
+                      transition
+                    ">
                       Permissions
                     </button>
-                    <button className="px-3 py-1.5 rounded-lg border border-red-600 text-red-600
-                      hover:bg-red-600 hover:text-white transition">
+                    <button className="
+                      px-3 py-1.5 rounded-lg
+                      bg-red-600 text-white
+                      border border-red-600
+                      hover:bg-transparent hover:text-red-600
+                      transition
+                    ">
                       Remove
                     </button>
                   </td>
@@ -222,9 +255,14 @@ export default function UserManagementPage() {
             <button
               disabled={pagination.page === 1}
               onClick={() => fetchUsers(pagination.page - 1)}
-              className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600
-                hover:bg-blue-600 hover:text-white transition
-                disabled:opacity-40 disabled:pointer-events-none"
+              className="
+                px-4 py-2 rounded-lg
+                bg-blue-600 text-white
+                border border-blue-600
+                hover:bg-transparent hover:text-blue-600
+                transition
+                disabled:opacity-40 disabled:pointer-events-none
+              "
             >
               Previous
             </button>
@@ -232,17 +270,20 @@ export default function UserManagementPage() {
             <button
               disabled={pagination.page === pagination.totalPages}
               onClick={() => fetchUsers(pagination.page + 1)}
-              className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600
-                hover:bg-blue-600 hover:text-white transition
-                disabled:opacity-40 disabled:pointer-events-none"
+              className="
+                px-4 py-2 rounded-lg
+                bg-blue-600 text-white
+                border border-blue-600
+                hover:bg-transparent hover:text-blue-600
+                transition
+                disabled:opacity-40 disabled:pointer-events-none
+              "
             >
               Next
             </button>
           </div>
         </div>
       </section>
-
-      
     </div>
   );
 }

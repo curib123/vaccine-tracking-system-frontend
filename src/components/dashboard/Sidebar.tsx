@@ -34,9 +34,26 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const logout = () => {
-    sessionStorage.clear();
-    router.replace('/login');
+  // ✅ LOGOUT USING BACKEND API
+  const logout = async () => {
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/logout`,
+        {
+          method: 'POST',
+          credentials: 'include', // 🔥 REQUIRED FOR COOKIES
+        }
+      );
+
+      // Optional: clear client state
+      sessionStorage.clear();
+      localStorage.clear();
+
+      // Redirect to login
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout failed', error);
+    }
   };
 
   return (
@@ -45,7 +62,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         min-h-screen flex flex-col
         transition-all duration-300
         ${collapsed ? 'w-[88px]' : 'w-80'}
-        bg-gradient-to-b from-[#0B4FB3] to-[#0A3F8F]
+        bg-linear-to-b from-[#0B4FB3] to-[#0A3F8F]
         text-white
       `}
     >
@@ -91,11 +108,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 flex items-center gap-4
                 px-5 py-3.5 rounded-xl
                 transition
-                ${
-                  active
-                    ? 'bg-white/20'
-                    : 'hover:bg-white/10'
-                }
+                ${active ? 'bg-white/20' : 'hover:bg-white/10'}
               `}
             >
               <Icon size={22} className="shrink-0" />
