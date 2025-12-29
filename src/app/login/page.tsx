@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import AlertModal from '@/components/modal/AlertModal';
@@ -19,7 +20,6 @@ type AlertState = {
 export default function LoginPage() {
   const router = useRouter();
 
-  // ✅ GUEST-ONLY GUARD (THIS IS THE FIX)
   const { loading } = useSessionGuard({
     mode: 'guest',
     redirectTo: '/admin/dashboard',
@@ -38,7 +38,6 @@ export default function LoginPage() {
   const closeAlert = () =>
     setAlert((prev) => ({ ...prev, open: false }));
 
-  // ⛔ Wait for guard decision
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-600">
@@ -67,11 +66,9 @@ export default function LoginPage() {
         throw new Error(result.message || 'Login failed');
       }
 
-      // ✅ Save session
       sessionStorage.setItem('session_token', result.session_token);
       sessionStorage.setItem('user', JSON.stringify(result.data));
 
-      // ✅ Success modal → continue to admin
       setAlert({
         open: true,
         type: 'success',
@@ -94,86 +91,94 @@ export default function LoginPage() {
 
   return (
     <>
-      {/* 🔔 Alert Modal */}
-      <AlertModal
-        open={alert.open}
-        type={alert.type}
-        title={alert.title}
-        message={alert.message}
-        actionLabel={alert.actionLabel}
-        onAction={alert.onAction}
-        onClose={closeAlert}
-      />
+      <AlertModal {...alert} onClose={closeAlert} />
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-100 px-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-green-100">
+      {/* ================= BACKGROUND ================= */}
+      <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-[#e4eaee]">
+
+        {/* Medical / Hex Pattern */}
+        <div
+          className="absolute inset-0 bg-no-repeat bg-right bg-contain opacity-85"
+          style={{
+            backgroundImage: "url('/login-bg.png')",
+          }}
+        />
+
+        {/* Light gradient wash (LESS opaque now) */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-[#eaf2f8]/40 to-[#d6e6f2]/60" />
+
+        {/* ================= LOGIN CARD ================= */}
+        <div className="relative z-10 w-full max-w-md bg-white/90 backdrop-blur-md rounded-[32px] shadow-xl px-8 pt-20 pb-10">
+
+          {/* Logo Badge */}
+          <div className="absolute -top-14 left-1/2 -translate-x-1/2">
+            <div className="w-28 h-28 rounded-full bg-white shadow-lg flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="Child Immunization Tracker Logo"
+                width={80}
+                height={80}
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
 
           {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-xl font-semibold text-green-700 tracking-wide">
-              Child Immunization Vaccine Tracker
+          <div className="text-center mb-8">
+            <h1 className="text-lg font-semibold tracking-wide text-gray-900">
+              CHILD IMMUNIZATION TRACKER
             </h1>
-
-            <div className="mt-3">
-              <h2 className="text-3xl font-bold text-green-600">
-                Welcome Back
-              </h2>
-              <p className="text-gray-500 mt-1">
-                Sign in to continue
-              </p>
-            </div>
-
-            <div className="mt-4 mx-auto w-20 h-1 rounded-full bg-green-200" />
+            <p className="text-sm text-gray-500 mt-1">
+              “Keeping immunizations simple and secure”
+            </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@healthcenter.com"
-                className="w-full rounded-xl border border-gray-300 px-4 py-3
-                  focus:border-green-500 focus:ring-2 focus:ring-green-100
-                  outline-none transition"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email Address"
+              className="
+                w-full rounded-2xl border border-gray-300 px-5 py-4
+                focus:border-blue-500 focus:ring-2 focus:ring-blue-100
+                outline-none transition text-gray-700
+              "
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-xl border border-gray-300 px-4 py-3
-                  focus:border-green-500 focus:ring-2 focus:ring-green-100
-                  outline-none transition"
-              />
-            </div>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="
+                w-full rounded-2xl border border-gray-300 px-5 py-4
+                focus:border-blue-500 focus:ring-2 focus:ring-blue-100
+                outline-none transition text-gray-700
+              "
+            />
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-xl bg-green-600 hover:bg-green-700
-                text-white font-semibold py-3 transition
-                disabled:opacity-60 disabled:cursor-not-allowed"
+              className="
+                w-full rounded-2xl py-4 font-semibold text-white
+                bg-gradient-to-r from-[#0B4FB3] to-[#1E7CF2]
+                hover:opacity-95 transition
+                disabled:opacity-60
+              "
             >
               {submitting ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            © {new Date().getFullYear()} Health Center System
+          <div className="mt-8 text-center text-xs text-gray-500">
+            © {new Date().getFullYear()} Child Immunization Tracker System
           </div>
         </div>
       </div>
