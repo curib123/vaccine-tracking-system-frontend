@@ -26,7 +26,7 @@ const links = [
   { href: '/admin/parents', label: 'Parent Management', icon: Users },
   { href: '/admin/immunization', label: 'Immunization', icon: Syringe },
   { href: '/admin/vaccines', label: 'Vaccine Management', icon: Syringe },
-  { href: '/admin/users', label: 'User Management', icon: UserCog },
+  { href: '/admin/user', label: 'User Management', icon: UserCog },
   { href: '/admin/administration', label: 'Administration', icon: Building2 },
 ];
 

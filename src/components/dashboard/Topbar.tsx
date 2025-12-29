@@ -17,7 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/parents': 'Parent Management',
   '/admin/immunization': 'Immunization',
   '/admin/vaccines': 'Vaccine Management',
-  '/admin/users': 'User Management',
+  '/admin/user': 'User Management',
   '/admin/administration': 'Administration',
 };
 
