@@ -10,7 +10,6 @@ import {
   useRouter,
 } from 'next/navigation';
 
-/* 🔹 SAME ROUTES AS SIDEBAR */
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': 'Dashboard Overview',
   '/admin/children': 'Children Records',
@@ -33,7 +32,6 @@ export default function Topbar({
   const router = useRouter();
   const pathname = usePathname();
 
-  /* 🔹 Resolve title */
   const title =
     PAGE_TITLES[pathname] ??
     PAGE_TITLES[
@@ -43,50 +41,128 @@ export default function Topbar({
     ] ??
     'Dashboard';
 
-  const logout = () => {
-    sessionStorage.clear();
-    router.replace('/login');
+  const logout = async () => {
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/logout`,
+        {
+          method: 'POST',
+          credentials: 'include',
+        }
+      );
+
+      sessionStorage.clear();
+      localStorage.clear();
+      router.replace('/login');
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
   };
 
   return (
-    <header className="h-16 bg-white border-b flex items-center justify-between px-6 shadow-sm">
-      {/* ================= Left ================= */}
-      <div className="flex items-center gap-4">
+    <header
+      className="
+        sticky top-0 z-40
+        h-20
+        px-6
+        py-3
+        flex items-center justify-between
+        backdrop-blur-xl
+        bg-white/70
+        border-b border-white/30
+        shadow-[0_8px_30px_rgba(0,0,0,0.06)]
+      "
+    >
+      {/* ================= LEFT ================= */}
+      <div className="flex items-center gap-5">
         <button
           onClick={onToggle}
-          className="p-2 rounded-lg hover:bg-gray-100 transition"
+          className="
+            p-2.5
+            rounded-xl
+            bg-white/60
+            hover:bg-white/90
+            transition
+            shadow-sm
+          "
         >
           <Menu className="text-[#0B4FB3]" size={22} />
         </button>
 
-        {/* 🔹 DYNAMIC TITLE */}
-        <h1 className="text-lg font-semibold text-gray-800">
-          {title}
-        </h1>
+        <div className="leading-tight">
+          <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
+            {title}
+          </h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Health Center System
+          </p>
+        </div>
       </div>
 
-      {/* ================= Right ================= */}
-      <div className="flex items-center gap-6">
+      {/* ================= RIGHT ================= */}
+      <div className="flex items-center gap-7">
         {/* User Info */}
-        <div className="text-right leading-tight">
+        <div className="hidden sm:block text-right leading-tight">
           <p className="text-sm font-semibold text-gray-800">
             {user?.firstName} {user?.lastName}
           </p>
-          <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs bg-blue-500 text-white">
+          <span className="
+            inline-block mt-1
+            px-3 py-0.5
+            rounded-full
+            text-xs font-medium
+            bg-blue-500/90 text-white
+          ">
             {user?.roleName}
           </span>
         </div>
 
-        {/* Profile Dropdown */}
+        {/* Avatar + Dropdown */}
         <div className="relative group">
-          <div className="w-10 h-10 rounded-full bg-[#0B4FB3] text-white flex items-center justify-center font-semibold cursor-pointer">
+          <div
+            className="
+              w-11 h-11
+              rounded-full
+              bg-gradient-to-br from-[#0B4FB3] to-[#0A3F8F]
+              text-white
+              flex items-center justify-center
+              font-semibold
+              shadow-md
+              cursor-pointer
+              ring-2 ring-white/60
+            "
+          >
             {user?.firstName?.charAt(0) ?? <User size={18} />}
           </div>
 
-          <div className="absolute right-0 mt-2 w-36 bg-white border rounded-xl shadow-lg opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto transition">
+          {/* Dropdown */}
+          <div
+            className="
+              absolute right-0 mt-4 w-40
+              rounded-2xl
+              bg-white/80
+              backdrop-blur-xl
+              border border-white/40
+              shadow-xl
+              opacity-0 scale-95
+              pointer-events-none
+              group-hover:opacity-100
+              group-hover:scale-100
+              group-hover:pointer-events-auto
+              transition-all duration-200
+            "
+          >
             <button
               onClick={logout}
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-xl"
+              className="
+                w-full flex items-center gap-2
+                px-4 py-3
+                text-sm font-medium text-gray-700
+                hover:bg-red-50
+                hover:text-red-600
+                rounded-2xl
+                transition
+              "
             >
               <LogOut size={16} />
               Logout
