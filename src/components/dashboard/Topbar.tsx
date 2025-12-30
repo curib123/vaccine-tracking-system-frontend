@@ -10,6 +10,8 @@ import {
   useRouter,
 } from 'next/navigation';
 
+import api from '@/lib/api'; // ✅ Axios Bearer instance
+
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': 'Dashboard Overview',
   '/admin/children': 'Children Records',
@@ -17,6 +19,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/immunization': 'Immunization',
   '/admin/vaccines': 'Vaccine Management',
   '/admin/user': 'User Management',
+  '/admin/roles': 'Role Management',
   '/admin/administration': 'Administration',
 };
 
@@ -41,17 +44,12 @@ export default function Topbar({
     ] ??
     'Dashboard';
 
+  /* ================= LOGOUT ================= */
   const logout = async () => {
     try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/logout`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        }
-      );
+      await api.post('/auth/logoutUser'); // 🔐 Bearer token sent automatically
 
-      sessionStorage.clear();
+      sessionStorage.clear(); // remove JWT
       localStorage.clear();
       router.replace('/login');
     } catch (err) {
@@ -106,13 +104,15 @@ export default function Topbar({
           <p className="text-sm font-semibold text-gray-800">
             {user?.firstName} {user?.lastName}
           </p>
-          <span className="
-            inline-block mt-1
-            px-3 py-0.5
-            rounded-full
-            text-xs font-medium
-            bg-blue-500/90 text-white
-          ">
+          <span
+            className="
+              inline-block mt-1
+              px-3 py-0.5
+              rounded-full
+              text-xs font-medium
+              bg-blue-500/90 text-white
+            "
+          >
             {user?.roleName}
           </span>
         </div>

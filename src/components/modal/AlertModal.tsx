@@ -14,11 +14,45 @@ interface AlertModalProps {
   onAction?: () => void;
 }
 
-const theme = {
-  success: { icon: '✓', color: 'green' },
-  error: { icon: '✕', color: 'red' },
-  warning: { icon: '!', color: 'yellow' },
-  info: { icon: 'ℹ', color: 'blue' },
+/* ================= THEME ================= */
+const themeMap: Record<
+  AlertType,
+  {
+    icon: string;
+    bg: string;
+    text: string;
+    button: string;
+    buttonHover: string;
+  }
+> = {
+  success: {
+    icon: '✓',
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-700',
+    button: 'bg-emerald-600',
+    buttonHover: 'hover:bg-emerald-700',
+  },
+  error: {
+    icon: '✕',
+    bg: 'bg-rose-100',
+    text: 'text-rose-700',
+    button: 'bg-rose-600',
+    buttonHover: 'hover:bg-rose-700',
+  },
+  warning: {
+    icon: '!',
+    bg: 'bg-amber-100',
+    text: 'text-amber-700',
+    button: 'bg-amber-500',
+    buttonHover: 'hover:bg-amber-600',
+  },
+  info: {
+    icon: 'ℹ',
+    bg: 'bg-blue-100',
+    text: 'text-blue-700',
+    button: 'bg-blue-600',
+    buttonHover: 'hover:bg-blue-700',
+  },
 };
 
 export default function AlertModal({
@@ -36,47 +70,66 @@ export default function AlertModal({
 
   if (!open) return null;
 
-  const t = theme[type];
+  const theme = themeMap[type];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl animate-scaleIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl animate-scaleIn">
 
-        {/* Icon */}
+        {/* ICON */}
         <div className="flex justify-center -mt-8">
           <div
-            className={`w-16 h-16 rounded-full flex items-center justify-center
-            bg-${t.color}-100 text-${t.color}-700 text-3xl font-bold shadow-md`}
+            className={`
+              w-16 h-16 rounded-full
+              flex items-center justify-center
+              text-3xl font-bold
+              shadow-lg
+              ${theme.bg} ${theme.text}
+            `}
           >
-            {t.icon}
+            {theme.icon}
           </div>
         </div>
 
-        {/* Content */}
+        {/* CONTENT */}
         <div className="mt-4 px-6 pb-6 text-center">
-          <h3 className="text-lg font-semibold text-gray-800">
-            {title || type.toUpperCase()}
+          <h3 className="text-lg font-semibold text-slate-900">
+            {title || 'Notice'}
           </h3>
 
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-slate-600 leading-relaxed">
             {message}
           </p>
 
+          {/* ACTIONS */}
           <div className="mt-6 flex gap-3">
             {actionLabel && onAction ? (
               <>
                 <button
                   onClick={onClose}
-                  className="w-1/2 rounded-xl border border-gray-300 text-gray-600 py-2.5 text-sm"
+                  className="
+                    w-1/2 rounded-xl
+                    bg-slate-100 text-slate-700
+                    py-2.5 text-sm font-medium
+                    hover:bg-slate-200
+                    transition
+                  "
                 >
                   Cancel
                 </button>
+
                 <button
                   onClick={() => {
                     onAction();
                     onClose();
                   }}
-                  className={`w-1/2 rounded-xl bg-${t.color}-600 text-white py-2.5 text-sm`}
+                  className={`
+                    w-1/2 rounded-xl
+                    py-2.5 text-sm font-medium
+                    text-white
+                    transition
+                    ${theme.button} ${theme.buttonHover}
+                  `}
                 >
                   {actionLabel}
                 </button>
@@ -84,7 +137,13 @@ export default function AlertModal({
             ) : (
               <button
                 onClick={onClose}
-                className="w-full rounded-xl bg-green-600 text-white py-2.5 text-sm"
+                className={`
+                  w-full rounded-xl
+                  py-2.5 text-sm font-medium
+                  text-white
+                  transition
+                  ${theme.button} ${theme.buttonHover}
+                `}
               >
                 OK
               </button>

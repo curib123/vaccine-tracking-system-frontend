@@ -21,29 +21,40 @@ export default function useSessionGuard<T = any>({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('session_token');
+    // ✅ Prevent SSR issues
+    if (typeof window === 'undefined') return;
+
+    const token = sessionStorage.getItem('token'); // ✅ correct key
     const userData = sessionStorage.getItem('user');
 
-    const isLoggedIn = !!token && !!userData;
+    const isLoggedIn = Boolean(token && userData);
 
-    // 🔐 Protected pages (dashboard/admin)
+    /* =========================
+       🔐 PROTECTED ROUTES
+    ========================= */
     if (mode === 'protected' && !isLoggedIn) {
       router.replace(redirectTo);
       return;
     }
 
-    // 👤 Guest-only pages (login)
+    /* =========================
+       👤 GUEST ROUTES
+    ========================= */
     if (mode === 'guest' && isLoggedIn) {
       router.replace(redirectTo);
       return;
     }
 
-    if (isLoggedIn) {
+    /* =========================
+       👤 SET USER STATE
+    ========================= */
+    if (isLoggedIn && userData) {
       try {
-        setUser(JSON.parse(userData!));
+        setUser(JSON.parse(userData));
       } catch {
         sessionStorage.clear();
         router.replace(redirectTo);
+        return;
       }
     }
 
