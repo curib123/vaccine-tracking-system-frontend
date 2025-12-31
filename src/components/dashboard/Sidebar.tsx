@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   Baby,
-  Building2,
   LayoutDashboard,
   LogOut,
   Shield,
+  Speaker,
   Syringe,
   UserCog,
   Users,
@@ -20,31 +23,108 @@ import {
 } from 'next/navigation';
 
 import AlertModal from '@/components/modal/AlertModal';
-import api from '@/lib/api'; // ✅ Axios instance with Bearer interceptor
+import api from '@/lib/api';
 
+/* ================= PERMISSIONS ================= */
+enum PermissionCode {
+  VIEW_DASHBOARD = 'VIEW_DASHBOARD',
+  VIEW_ANNOUNCEMENT = 'VIEW_ANNOUNCEMENT',
+
+  MANAGE_CHILDREN = 'MANAGE_CHILDREN',
+  MANAGE_PARENTS = 'MANAGE_PARENTS',
+
+  MANAGE_IMMUNIZATION = 'MANAGE_IMMUNIZATION',
+  MANAGE_VACCINES = 'MANAGE_VACCINES',
+
+  MANAGE_USERS = 'MANAGE_USERS',
+  MANAGE_ROLES = 'MANAGE_ROLES',
+
+  MANAGE_ADMINISTRATION = 'MANAGE_ADMINISTRATION',
+}
+
+/* ================= TYPES ================= */
 type SidebarProps = {
   collapsed: boolean;
 };
 
+type Permission = {
+  id: number;
+  code: PermissionCode;
+};
+
+type UserSession = {
+  permissions?: Permission[];
+};
+
+/* ================= LINKS WITH PERMISSIONS ================= */
 const links = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-
-  { href: '/admin/children', label: 'Children record', icon: Baby },
-  { href: '/admin/parents', label: 'Parent Management', icon: Users },
-
-  { href: '/admin/immunization', label: 'Immunization', icon: Syringe },
-  { href: '/admin/vaccines', label: 'Vaccine Management', icon: Syringe },
-
-  // 👇 Access Control (clean separation)
-  { href: '/admin/users', label: 'Users Management', icon: UserCog },
-  { href: '/admin/roles', label: 'Roles Management', icon: Shield },
-
-  { href: '/admin/administration', label: 'Administration', icon: Building2 },
+  {
+    href: '/admin/dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    required: PermissionCode.VIEW_DASHBOARD,
+  },
+  {
+    href: '/admin/announcement',
+    label: 'Announcement',
+    icon: Speaker,
+    required: PermissionCode.VIEW_ANNOUNCEMENT,
+  },
+  {
+    href: '/admin/children',
+    label: 'Children record',
+    icon: Baby,
+    required: PermissionCode.MANAGE_CHILDREN,
+  },
+  {
+    href: '/admin/parents',
+    label: 'Parent Management',
+    icon: Users,
+    required: PermissionCode.MANAGE_PARENTS,
+  },
+  {
+    href: '/admin/immunization',
+    label: 'Immunization Record',
+    icon: Syringe,
+    required: PermissionCode.MANAGE_IMMUNIZATION,
+  },
+  {
+    href: '/admin/vaccines',
+    label: 'Vaccine Management',
+    icon: Syringe,
+    required: PermissionCode.MANAGE_VACCINES,
+  },
+  {
+    href: '/admin/users',
+    label: 'Users Management',
+    icon: UserCog,
+    required: PermissionCode.MANAGE_USERS,
+  },
+  {
+    href: '/admin/roles',
+    label: 'Roles Management',
+    icon: Shield,
+    required: PermissionCode.MANAGE_ROLES,
+  },
 ];
 
+/* ================= COMPONENT ================= */
 export default function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+
+  /* ================= PERMISSION STATE ================= */
+  const [permissionSet, setPermissionSet] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem('user');
+    if (!raw) return;
+
+    const user: UserSession = JSON.parse(raw);
+    const perms = user.permissions?.map(p => p.code) || [];
+
+    setPermissionSet(new Set(perms));
+  }, []);
 
   /* ================= ALERT STATE ================= */
   const [alertOpen, setAlertOpen] = useState(false);
@@ -62,7 +142,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     } catch (error: any) {
       setAlertType('error');
       setAlertMessage(
-        error?.response?.data?.message || 'Logout failed. Please try again.'
+        error?.response?.data?.message ||
+          'Logout failed. Please try again.'
       );
       setAlertOpen(true);
     }
@@ -70,7 +151,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   /* ================= AFTER LOGOUT ================= */
   const handleLogoutDone = () => {
-    sessionStorage.clear(); // ✅ clears Bearer token
+    sessionStorage.clear();
     localStorage.clear();
     router.replace('/login');
   };
@@ -117,30 +198,36 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
         {/* ================= NAV ================= */}
         <nav className="flex-1 px-6 space-y-2">
-          {links.map((link) => {
-            const active = pathname === link.href;
-            const Icon = link.icon;
+          {links
+            .filter(
+              link =>
+                !link.required ||
+                permissionSet.has(link.required)
+            )
+            .map(link => {
+              const active = pathname === link.href;
+              const Icon = link.icon;
 
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`
-                  flex items-center gap-4
-                  px-5 py-3.5 rounded-xl
-                  transition
-                  ${active ? 'bg-white/20' : 'hover:bg-white/10'}
-                `}
-              >
-                <Icon size={22} className="shrink-0" />
-                {!collapsed && (
-                  <span className="text-base font-medium">
-                    {link.label}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`
+                    flex items-center gap-4
+                    px-5 py-3.5 rounded-xl
+                    transition
+                    ${active ? 'bg-white/20' : 'hover:bg-white/10'}
+                  `}
+                >
+                  <Icon size={22} className="shrink-0" />
+                  {!collapsed && (
+                    <span className="text-base font-medium">
+                      {link.label}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
         </nav>
 
         {/* ================= LOGOUT ================= */}

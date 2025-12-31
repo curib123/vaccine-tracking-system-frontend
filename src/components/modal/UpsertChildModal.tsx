@@ -61,7 +61,6 @@ export default function UpsertChildModal({
   const [openList, setOpenList] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  /* 🔑 REFS (AUTOFILL FIX) */
   const firstNameRef = useRef<HTMLInputElement>(null);
   const middleNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
@@ -90,7 +89,7 @@ export default function UpsertChildModal({
       );
   }, [open]);
 
-  /* ================= LOAD CHILD (EDIT) ================= */
+  /* ================= LOAD CHILD (EDIT MODE) ================= */
   useEffect(() => {
     if (!open) return;
 
@@ -104,7 +103,8 @@ export default function UpsertChildModal({
       .get(`/child/getChildById/${childId}`)
       .then(res => {
         const c = res.data.data;
-        setForm({
+
+        const filled: ChildForm = {
           parentId: c.parent?.id || '',
           firstName: c.firstName || '',
           middleName: c.middleName || '',
@@ -112,6 +112,17 @@ export default function UpsertChildModal({
           gender: c.gender || '',
           birthDate: c.birthDate?.split('T')[0] || '',
           birthPlace: c.birthPlace || '',
+        };
+
+        setForm(filled);
+
+        // 🔑 Sync inputs (fix browser autofill mismatch)
+        requestAnimationFrame(() => {
+          if (firstNameRef.current) firstNameRef.current.value = filled.firstName;
+          if (middleNameRef.current) middleNameRef.current.value = filled.middleName;
+          if (lastNameRef.current) lastNameRef.current.value = filled.lastName;
+          if (birthDateRef.current) birthDateRef.current.value = filled.birthDate;
+          if (birthPlaceRef.current) birthPlaceRef.current.value = filled.birthPlace;
         });
 
         if (c.parent) {
@@ -136,26 +147,20 @@ export default function UpsertChildModal({
       .includes(query.toLowerCase())
   );
 
-  /* ================= SUBMIT (AUTOFILL SAFE) ================= */
+  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
-    /* 🔥 SYNC AUTOFILLED VALUES */
     const syncedForm: ChildForm = {
-      ...form,
-      firstName:
-        form.firstName || firstNameRef.current?.value || '',
-      middleName:
-        form.middleName || middleNameRef.current?.value || '',
-      lastName:
-        form.lastName || lastNameRef.current?.value || '',
-      birthDate:
-        form.birthDate || birthDateRef.current?.value || '',
-      birthPlace:
-        form.birthPlace || birthPlaceRef.current?.value || '',
+      parentId: form.parentId,
+      firstName: firstNameRef.current?.value.trim() || '',
+      middleName: middleNameRef.current?.value.trim() || '',
+      lastName: lastNameRef.current?.value.trim() || '',
+      gender: form.gender,
+      birthDate: birthDateRef.current?.value || '',
+      birthPlace: birthPlaceRef.current?.value.trim() || '',
     };
 
     setForm(syncedForm);
 
-    /* ✅ VALIDATION */
     if (
       !syncedForm.parentId ||
       !syncedForm.firstName ||
@@ -210,7 +215,6 @@ export default function UpsertChildModal({
     <>
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
         <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
-
           {/* HEADER */}
           <div className="px-6 py-5 border-b">
             <h2 className="text-lg font-semibold text-slate-800">
@@ -223,7 +227,6 @@ export default function UpsertChildModal({
 
           {/* BODY */}
           <div className="px-6 py-5 space-y-4">
-
             {/* PARENT SEARCH */}
             <div className="relative">
               <label className="text-sm font-medium text-slate-700">
@@ -272,41 +275,16 @@ export default function UpsertChildModal({
 
             {/* NAME */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <input
-                ref={firstNameRef}
-                name="child-first-name"
-                autoComplete="given-name"
-                placeholder="First name *"
-                className="px-4 py-2.5 rounded-xl border"
-              />
-
-              <input
-                ref={middleNameRef}
-                name="child-middle-name"
-                autoComplete="additional-name"
-                placeholder="Middle name"
-                className="px-4 py-2.5 rounded-xl border"
-              />
-
-              <input
-                ref={lastNameRef}
-                name="child-last-name"
-                autoComplete="family-name"
-                placeholder="Last name *"
-                className="px-4 py-2.5 rounded-xl border"
-              />
+              <input ref={firstNameRef} placeholder="First name *" className="px-4 py-2.5 rounded-xl border" />
+              <input ref={middleNameRef} placeholder="Middle name" className="px-4 py-2.5 rounded-xl border" />
+              <input ref={lastNameRef} placeholder="Last name *" className="px-4 py-2.5 rounded-xl border" />
             </div>
 
             {/* GENDER + BIRTH */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <select
                 value={form.gender}
-                onChange={e =>
-                  setForm({
-                    ...form,
-                    gender: e.target.value as any,
-                  })
-                }
+                onChange={e => setForm({ ...form, gender: e.target.value as any })}
                 className="px-4 py-2.5 rounded-xl border"
               >
                 <option value="">Select gender *</option>
@@ -314,29 +292,16 @@ export default function UpsertChildModal({
                 <option value="FEMALE">Female</option>
               </select>
 
-              <input
-                ref={birthDateRef}
-                type="date"
-                autoComplete="bday"
-                className="px-4 py-2.5 rounded-xl border"
-              />
+              <input ref={birthDateRef} type="date" className="px-4 py-2.5 rounded-xl border" />
             </div>
 
             {/* BIRTH PLACE */}
-            <input
-              ref={birthPlaceRef}
-              autoComplete="birthplace"
-              placeholder="Birth place *"
-              className="px-4 py-2.5 rounded-xl border"
-            />
+            <input ref={birthPlaceRef} placeholder="Birth place *" className="px-4 py-2.5 rounded-xl border" />
           </div>
 
           {/* FOOTER */}
           <div className="flex justify-end gap-3 px-6 py-4 border-t">
-            <button
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border"
-            >
+            <button onClick={onClose} className="px-5 py-2.5 rounded-xl border">
               Cancel
             </button>
 
@@ -345,17 +310,12 @@ export default function UpsertChildModal({
               disabled={saving}
               className="px-6 py-2.5 rounded-xl bg-blue-600 text-white disabled:opacity-50"
             >
-              {saving
-                ? 'Saving...'
-                : isEdit
-                ? 'Update Child'
-                : 'Create Child'}
+              {saving ? 'Saving...' : isEdit ? 'Update Child' : 'Create Child'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* ALERT */}
       <AlertModal
         open={alert.open}
         type={alert.type}
