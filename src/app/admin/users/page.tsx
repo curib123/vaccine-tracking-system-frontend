@@ -47,6 +47,12 @@ function UsersPageContent() {
     totalPages: 1,
   });
 
+  /* 🆕 SEARCH / FILTER / SORT */
+  const [search, setSearch] = useState('');
+  const [isActive, setIsActive] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -59,12 +65,21 @@ function UsersPageContent() {
   /* ================= LOAD USERS ================= */
   useEffect(() => {
     fetchUsers(1);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, isActive, sortBy, sortOrder]);
 
   const fetchUsers = async (page: number) => {
-    const { data } = await api.get('/user/getAllUsers', {
-      params: { page, limit: pagination.limit },
-    });
+    const params: any = {
+      page,
+      limit: pagination.limit,
+      sortBy,
+      sortOrder,
+    };
+
+    if (search) params.search = search;
+    if (isActive !== '') params.isActive = isActive;
+
+    const { data } = await api.get('/user/getAllUsers', { params });
 
     setUsers(data.data || []);
     setPagination(data.pagination);
@@ -119,6 +134,41 @@ function UsersPageContent() {
         </p>
       </header>
 
+      {/* 🆕 FILTER BAR */}
+      <section className="bg-white rounded-xl shadow px-6 py-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search name or email"
+          className="px-4 py-2 border rounded-lg text-sm w-64"
+        />
+
+        <select
+          value={isActive}
+          onChange={e => setIsActive(e.target.value)}
+          className="px-4 py-2 border rounded-lg text-sm"
+        >
+          <option value="">All Status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+
+        <select
+          value={`${sortBy}:${sortOrder}`}
+          onChange={e => {
+            const [sb, so] = e.target.value.split(':');
+            setSortBy(sb);
+            setSortOrder(so as 'asc' | 'desc');
+          }}
+          className="px-4 py-2 border rounded-lg text-sm"
+        >
+          <option value="createdAt:desc">Newest</option>
+          <option value="createdAt:asc">Oldest</option>
+          <option value="lastName:asc">Name A–Z</option>
+          <option value="email:asc">Email A–Z</option>
+        </select>
+      </section>
+
       {/* CURRENT USER */}
       {currentUser && (
         <section className="relative bg-white rounded-2xl shadow-md px-6 py-5">
@@ -146,11 +196,6 @@ function UsersPageContent() {
                   Active
                 </span>
               </div>
-            </div>
-
-            <div className="hidden sm:flex w-11 h-11 rounded-full bg-blue-100 text-blue-700 font-semibold items-center justify-center">
-              {currentUser.firstName?.[0]}
-              {currentUser.lastName?.[0]}
             </div>
           </div>
         </section>
@@ -199,29 +244,19 @@ function UsersPageContent() {
 
             {otherUsers.map(u => (
               <tr key={u.id} className="hover:bg-slate-50 transition">
-
                 <td className="px-6 py-4 font-medium text-slate-800">
                   {u.firstName} {u.middleName} {u.lastName}
                 </td>
-
-                <td className="px-6 py-4 text-slate-500">
-                  {u.email}
-                </td>
-
-                <td className="px-6 py-4 text-slate-500">
-                  {u.contactNo || '—'}
-                </td>
-
+                <td className="px-6 py-4 text-slate-500">{u.email}</td>
+                <td className="px-6 py-4 text-slate-500">{u.contactNo || '—'}</td>
                 <td className="px-6 py-4 text-slate-500 max-w-[240px] truncate">
                   {u.address || '—'}
                 </td>
-
                 <td className="px-6 py-4 text-center">
                   <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
                     {u.roleName}
                   </span>
                 </td>
-
                 <td className="px-6 py-4 text-center">
                   <button
                     onClick={() => toggleStatus(u.id)}
@@ -234,39 +269,34 @@ function UsersPageContent() {
                     {u.isActive ? 'Active' : 'Inactive'}
                   </button>
                 </td>
-
                 <td className="px-6 py-4 text-slate-500">
                   {new Date(u.createdAt).toLocaleDateString()}
                 </td>
-
-                {/* ACTIONS */}
                 <td className="px-6 py-4 text-right space-x-2">
                   <button
                     onClick={() => {
                       setPermissionUserId(u.id);
                       setPermissionOpen(true);
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow hover:shadow-md hover:text-blue-600 transition text-xs"
+                    className="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow hover:text-blue-600 transition text-xs"
                   >
                     Permissions
                   </button>
-
                   <button
                     onClick={() => {
                       setSelectedId(u.id);
                       setModalOpen(true);
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow hover:shadow-md transition text-xs"
+                    className="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow transition text-xs"
                   >
                     Edit
                   </button>
-
                   <button
                     onClick={() => {
                       setAlertUserId(u.id);
                       setAlertOpen(true);
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-red-600 shadow hover:shadow-md transition text-xs"
+                    className="px-3 py-1.5 rounded-lg bg-white text-red-600 shadow transition text-xs"
                   >
                     Remove
                   </button>
