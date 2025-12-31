@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 import {
   Baby,
-  Building2,
   LayoutDashboard,
   LogOut,
   Shield,
@@ -39,7 +38,6 @@ const links = [
   { href: '/admin/users', label: 'Users Management', icon: UserCog },
   { href: '/admin/roles', label: 'Roles Management', icon: Shield },
 
-  { href: '/admin/administration', label: 'Administration', icon: Building2 },
 ];
 
 export default function Sidebar({ collapsed }: SidebarProps) {
