@@ -12,11 +12,22 @@ import UpsertVaccineModal from '@/components/modal/UpsertVaccineModal';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
+type Schedule = {
+  doseLabel: string;
+  doseNumber: number;
+  recommendedAgeInMonths: number;
+  intervalDays?: number;
+};
+
 type Vaccine = {
   id: number;
   name: string;
   description?: string;
   recommendedAge: string;
+  totalDoses?: number;
+  requiresBooster?: boolean;
+  boosterAfterMonths?: number;
+  schedules?: Schedule[];
   createdAt: string;
 };
 
@@ -38,13 +49,16 @@ function VaccinePageContent() {
 
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder, setSortOrder] =
+    useState<'asc' | 'desc'>('desc');
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] =
+    useState<number | null>(null);
 
   const [alertOpen, setAlertOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] =
+    useState<number | null>(null);
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -62,7 +76,10 @@ function VaccinePageContent() {
 
     if (search) params.search = search;
 
-    const { data } = await api.get('/vaccine/getAllVaccines', { params });
+    const { data } = await api.get(
+      '/vaccine/getAllVaccines',
+      { params }
+    );
 
     setVaccines(data.data || []);
     setPagination(data.pagination);
@@ -80,7 +97,36 @@ function VaccinePageContent() {
   };
 
   /* ================= MEMO ================= */
-  const hasData = useMemo(() => vaccines.length > 0, [vaccines]);
+  const hasData = useMemo(
+    () => vaccines.length > 0,
+    [vaccines]
+  );
+
+  /* ================= HELPERS ================= */
+  const renderScheduleInfo = (schedules?: Schedule[]) => {
+    if (!schedules || schedules.length === 0) {
+      return <span className="text-slate-400">—</span>;
+    }
+
+    return (
+      <div className="space-y-1">
+        <span className="font-medium">
+          {schedules.length} dose
+          {schedules.length > 1 ? 's' : ''}
+        </span>
+        <div className="text-xs text-slate-500">
+          {schedules.map((s, i) => (
+            <div key={i}>
+              {s.doseLabel || `Dose ${s.doseNumber}`}
+              {s.intervalDays
+                ? ` • +${s.intervalDays} days`
+                : ''}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   /* ================= RENDER ================= */
   return (
@@ -93,7 +139,7 @@ function VaccinePageContent() {
             Vaccine Management
           </h1>
           <p className="text-sm text-slate-500">
-            Manage vaccines and recommended schedules
+            Manage vaccines, doses, and scheduling intervals
           </p>
         </div>
 
@@ -113,7 +159,7 @@ function VaccinePageContent() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search vaccine"
+          placeholder="Search vaccine name"
           className="px-4 py-2 rounded-lg border text-sm w-64"
         />
 
@@ -129,7 +175,10 @@ function VaccinePageContent() {
           <option value="createdAt:desc">Newest</option>
           <option value="createdAt:asc">Oldest</option>
           <option value="name:asc">Name A–Z</option>
-          <option value="recommendedAge:asc">Recommended Age</option>
+          <option value="recommendedAge:asc">
+            Recommended Age
+          </option>
+          <option value="totalDoses:asc">Total Doses</option>
         </select>
       </section>
 
@@ -138,13 +187,27 @@ function VaccinePageContent() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
-              <th className="px-6 py-3 text-left font-medium">Vaccine</th>
+              <th className="px-6 py-3 text-left font-medium">
+                Vaccine
+              </th>
               <th className="px-6 py-3 text-left font-medium">
                 Recommended Age
               </th>
-              <th className="px-6 py-3 text-left font-medium">Description</th>
-              <th className="px-6 py-3 text-left font-medium">Created</th>
-              <th className="px-6 py-3 text-right font-medium">Actions</th>
+              <th className="px-6 py-3 text-left font-medium">
+                Doses
+              </th>
+              <th className="px-6 py-3 text-left font-medium">
+                Booster
+              </th>
+              <th className="px-6 py-3 text-left font-medium">
+                Schedule Details
+              </th>
+              <th className="px-6 py-3 text-left font-medium">
+                Created
+              </th>
+              <th className="px-6 py-3 text-right font-medium">
+                Actions
+              </th>
             </tr>
           </thead>
 
@@ -152,7 +215,7 @@ function VaccinePageContent() {
             {!hasData && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="py-14 text-center text-slate-400"
                 >
                   No vaccines found
@@ -161,7 +224,10 @@ function VaccinePageContent() {
             )}
 
             {vaccines.map(v => (
-              <tr key={v.id} className="hover:bg-slate-50 transition">
+              <tr
+                key={v.id}
+                className="hover:bg-slate-50 transition"
+              >
                 <td className="px-6 py-4 font-medium text-slate-800">
                   {v.name}
                 </td>
@@ -170,8 +236,27 @@ function VaccinePageContent() {
                   {v.recommendedAge}
                 </td>
 
-                <td className="px-6 py-4 text-slate-500 max-w-[300px] truncate">
-                  {v.description || '—'}
+                <td className="px-6 py-4 text-slate-500">
+                  {v.totalDoses ?? '—'}
+                </td>
+
+                <td className="px-6 py-4">
+                  {v.requiresBooster ? (
+                    <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">
+                      Yes
+                      {v.boosterAfterMonths
+                        ? ` (${v.boosterAfterMonths}m)`
+                        : ''}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs">
+                      No
+                    </span>
+                  )}
+                </td>
+
+                <td className="px-6 py-4 text-slate-600">
+                  {renderScheduleInfo(v.schedules)}
                 </td>
 
                 <td className="px-6 py-4 text-slate-500">
@@ -214,15 +299,21 @@ function VaccinePageContent() {
           <div className="flex gap-2">
             <button
               disabled={pagination.page === 1}
-              onClick={() => fetchVaccines(pagination.page - 1)}
+              onClick={() =>
+                fetchVaccines(pagination.page - 1)
+              }
               className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40"
             >
               Previous
             </button>
 
             <button
-              disabled={pagination.page === pagination.totalPages}
-              onClick={() => fetchVaccines(pagination.page + 1)}
+              disabled={
+                pagination.page === pagination.totalPages
+              }
+              onClick={() =>
+                fetchVaccines(pagination.page + 1)
+              }
               className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40"
             >
               Next
