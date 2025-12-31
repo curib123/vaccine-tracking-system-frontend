@@ -42,7 +42,7 @@ const initialForm: UserForm = {
   lastName: '',
   contactNo: '',
   address: '',
-  roleId: 0,
+  roleId: -1, // sentinel (no role selected yet)
 };
 
 /* ================= COMPONENT ================= */
@@ -56,8 +56,8 @@ export default function UpsertUserModal({
   const isEdit = Boolean(userId);
 
   const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<UserForm>(initialForm);
+  const [loading, setLoading] = useState(false);
 
   /* ================= HELPERS ================= */
   const resetForm = () => setForm(initialForm);
@@ -81,10 +81,15 @@ export default function UpsertUserModal({
     const loadRoles = async () => {
       try {
         const { data } = await api.get('/roles/getAllRoles');
-        setRoles(data.data || []);
+        const list: Role[] = data?.data || [];
+        setRoles(list);
 
-        if (!isEdit && data.data?.length) {
-          setForm(f => ({ ...f, roleId: data.data[0].id }));
+        // auto select first role on CREATE
+        if (!isEdit && list.length > 0) {
+          setForm(f => ({
+            ...f,
+            roleId: list[0].id,
+          }));
         }
       } catch (err) {
         handleAuthError(err);
@@ -104,15 +109,16 @@ export default function UpsertUserModal({
         setLoading(true);
 
         const { data } = await api.get(`/user/getUserById/${userId}`);
+        const u = data.data;
 
         setForm({
-          email: data.data.email,
-          firstName: data.data.firstName,
-          middleName: data.data.middleName || '',
-          lastName: data.data.lastName,
-          contactNo: data.data.contactNo,
-          address: data.data.address,
-          roleId: data.data.roleId,
+          email: u.email,
+          firstName: u.firstName,
+          middleName: u.middleName || '',
+          lastName: u.lastName,
+          contactNo: u.contactNo || '',
+          address: u.address || '',
+          roleId: Number(u.roleId), // ✅ ensure number
         });
       } catch (err) {
         handleAuthError(err);
@@ -135,10 +141,19 @@ export default function UpsertUserModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
+
+    setForm(f => ({
+      ...f,
+      [name]: name === 'roleId' ? Number(value) : value,
+    }));
   };
 
   const submit = async () => {
+    if (form.roleId < 0) {
+      alert('Please select a role');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -227,8 +242,11 @@ export default function UpsertUserModal({
               name="roleId"
               value={form.roleId}
               onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"
             >
+              <option value={-1} disabled>
+                Select role
+              </option>
               {roles.map(r => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -250,8 +268,8 @@ export default function UpsertUserModal({
 
           <button
             onClick={submit}
-            disabled={loading}
-            className="px-5 py-2 rounded-lg bg-blue-600 text-white"
+            disabled={loading || form.roleId < 0}
+            className="px-5 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50"
           >
             {loading ? 'Saving...' : isEdit ? 'Update User' : 'Create User'}
           </button>
@@ -274,7 +292,7 @@ function Input(
       </label>
       <input
         {...inputProps}
-        className="w-full px-3 py-2 rounded-lg border border-slate-300"
+        className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"
       />
     </div>
   );

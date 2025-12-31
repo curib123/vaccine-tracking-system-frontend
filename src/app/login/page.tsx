@@ -53,9 +53,25 @@ function LoginContent() {
         throw new Error(data?.message || 'Login failed');
       }
 
-      // ✅ STORE BEARER TOKEN
+      /* ================= STORE SESSION ================= */
       sessionStorage.setItem('token', data.token);
       sessionStorage.setItem('user', JSON.stringify(data.data));
+
+      /* ================= ROLE-BASED REDIRECT ================= */
+      const roleName = String(data.data.roleName || '')
+        .trim()
+        .toUpperCase();
+
+      const PARENT_ROLE = String(
+        process.env.NEXT_PUBLIC_PARENT_ROLE_NAME || 'PARENT/GUARDIAN'
+      )
+        .trim()
+        .toUpperCase();
+
+      const redirectTo =
+        roleName === PARENT_ROLE
+          ? '/user'
+          : '/admin/dashboard';
 
       setAlert({
         open: true,
@@ -63,7 +79,7 @@ function LoginContent() {
         title: 'Login Successful',
         message: `Welcome back, ${data.data.firstName}!`,
         actionLabel: 'Continue',
-        onAction: () => router.replace('/admin/dashboard'),
+        onAction: () => router.replace(redirectTo),
       });
 
     } catch (err: any) {
@@ -87,13 +103,18 @@ function LoginContent() {
       <AlertModal {...alert} onClose={closeAlert} />
 
       <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-[#e4eaee]">
+        {/* Background image */}
         <div
           className="absolute inset-0 bg-no-repeat bg-right bg-contain opacity-85"
           style={{ backgroundImage: "url('/login-bg.png')" }}
         />
+
+        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-[#eaf2f8]/40 to-[#d6e6f2]/60" />
 
+        {/* Card */}
         <div className="relative z-10 w-full max-w-md bg-white/90 backdrop-blur-md rounded-[32px] shadow-xl px-8 pt-20 pb-10">
+
           {/* Logo */}
           <div className="absolute -top-14 left-1/2 -translate-x-1/2">
             <div className="w-28 h-28 rounded-full bg-white shadow-lg flex items-center justify-center">
@@ -125,7 +146,8 @@ function LoginContent() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="Email Address"
-              className="w-full rounded-2xl border px-5 py-4 focus:ring-2"
+              className="w-full rounded-2xl border border-gray-200 px-5 py-4
+                         focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
 
             <input
@@ -134,7 +156,8 @@ function LoginContent() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-2xl border px-5 py-4 focus:ring-2"
+              className="w-full rounded-2xl border border-gray-200 px-5 py-4
+                         focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
 
             <button
@@ -148,6 +171,7 @@ function LoginContent() {
             </button>
           </form>
 
+          {/* Footer */}
           <div className="mt-8 text-center text-xs text-gray-500">
             © {new Date().getFullYear()} Child Immunization Tracker System
           </div>

@@ -30,10 +30,23 @@ type Parent = {
 };
 
 type Child = {
-  child_id: number;
-  first_name: string;
-  last_name: string;
-  date_of_birth?: string;
+  id: number;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  birthDate?: string;
+};
+
+type ImmunizationRecord = {
+  id: number;
+  vaccine: { name: string };
+  status: { code: string };
+};
+
+type ImmunizationSummary = {
+  total: number;
+  completed: number;
+  pending: number;
 };
 
 type Pagination = {
@@ -51,13 +64,11 @@ export default function ParentsPage() {
   /* ================= URL STATE ================= */
   const page = Number(searchParams.get('page')) || 1;
   const limit = Number(searchParams.get('limit')) || 10;
-
   const search = searchParams.get('search') ?? '';
   const isActive = searchParams.get('isActive') ?? '';
   const sortBy = searchParams.get('sortBy') ?? 'createdAt';
   const sortOrder = searchParams.get('sortOrder') ?? 'desc';
 
-  /* ================= STABLE EFFECT KEY ================= */
   const queryKey = useMemo(
     () => `${page}|${limit}|${search}|${isActive}|${sortBy}|${sortOrder}`,
     [page, limit, search, isActive, sortBy, sortOrder]
@@ -66,7 +77,12 @@ export default function ParentsPage() {
   /* ================= STATE ================= */
   const [parents, setParents] = useState<Parent[]>([]);
   const [children, setChildren] = useState<Record<number, Child[]>>({});
+  const [childRecords, setChildRecords] = useState<
+    Record<number, { records: ImmunizationRecord[]; summary: ImmunizationSummary | null }>
+  >({});
+
   const [expandedParentId, setExpandedParentId] = useState<number | null>(null);
+  const [expandedChildId, setExpandedChildId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [pagination, setPagination] = useState<Pagination>({
@@ -85,12 +101,9 @@ export default function ParentsPage() {
   /* ================= URL HELPERS ================= */
   const updateParams = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
-
-    Object.entries(updates).forEach(([key, value]) => {
-      if (!value) params.delete(key);
-      else params.set(key, value);
-    });
-
+    Object.entries(updates).forEach(([k, v]) =>
+      v ? params.set(k, v) : params.delete(k)
+    );
     params.set('page', '1');
     router.push(`?${params.toString()}`);
   };
@@ -107,19 +120,16 @@ export default function ParentsPage() {
     try {
       setLoading(true);
 
-      // ✅ SEND ONLY VALID PARAMS (fix default load)
       const params: Record<string, any> = {
         page,
         limit,
         sortBy,
         sortOrder,
       };
-
       if (search) params.search = search;
       if (isActive !== '') params.isActive = isActive;
 
       const res = await api.get('/parent/getAllParents', { params });
-
       setParents(res.data.data || []);
       setPagination(res.data.pagination);
     } catch {
@@ -135,18 +145,34 @@ export default function ParentsPage() {
 
   const loadChildren = async (parentId: number) => {
     const res = await api.get(`/parent/${parentId}/children`);
-    setChildren(prev => ({
-      ...prev,
+    setChildren(p => ({
+      ...p,
       [parentId]: res.data.data || [],
     }));
   };
 
+  const loadChildRecords = async (childId: number) => {
+    if (!childId || childRecords[childId]) return;
+
+    const res = await api.get(`/records/child/${childId}`);
+    setChildRecords(p => ({
+      ...p,
+      [childId]: {
+        records: res.data.data || [],
+        summary: res.data.summary ?? null,
+      },
+    }));
+  };
+
+  /* ================= TOGGLES ================= */
   const toggleChildren = async (parentId: number) => {
     setExpandedParentId(prev => (prev === parentId ? null : parentId));
+    if (!children[parentId]) await loadChildren(parentId);
+  };
 
-    if (!children[parentId]) {
-      await loadChildren(parentId);
-    }
+  const toggleChildRecords = async (childId: number) => {
+    setExpandedChildId(prev => (prev === childId ? null : childId));
+    await loadChildRecords(childId);
   };
 
   /* ================= EFFECT ================= */
@@ -158,48 +184,23 @@ export default function ParentsPage() {
   return (
     <AuthGuard>
       <div className="space-y-6">
-
         <h1 className="text-2xl font-semibold text-slate-800">
           Parent Management
         </h1>
 
-        {/* ================= FILTER BAR ================= */}
-        <div className="flex flex-wrap gap-3 bg-white p-4 rounded-2xl shadow-sm">
+        {/* FILTER */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm">
           <input
             value={search}
             onChange={e => updateParams({ search: e.target.value })}
-            placeholder="Search name, email, contact..."
+            placeholder="Search parent name or email"
             className="px-4 py-2 rounded-xl border text-sm w-64"
           />
-
-          <select
-            value={isActive}
-            onChange={e => updateParams({ isActive: e.target.value })}
-            className="px-4 py-2 rounded-xl border text-sm"
-          >
-            <option value="">All Status</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-          </select>
-
-          <select
-            value={`${sortBy}:${sortOrder}`}
-            onChange={e => {
-              const [sb, so] = e.target.value.split(':');
-              updateParams({ sortBy: sb, sortOrder: so });
-            }}
-            className="px-4 py-2 rounded-xl border text-sm"
-          >
-            <option value="createdAt:desc">Newest</option>
-            <option value="createdAt:asc">Oldest</option>
-            <option value="lastName:asc">Last Name A–Z</option>
-            <option value="email:asc">Email A–Z</option>
-          </select>
         </div>
 
-        {/* ================= TABLE ================= */}
+        {/* TABLE */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <table className="w-full table-fixed text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-6 py-4 text-left">Parent</th>
@@ -209,39 +210,26 @@ export default function ParentsPage() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-100">
-              {!loading && parents.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-slate-400">
-                    No parents found
-                  </td>
-                </tr>
-              )}
-
+            <tbody className="divide-y">
               {parents.map(parent => (
-                <Fragment key={parent.id}>
-                  <tr className="hover:bg-slate-50">
+                <Fragment key={`parent-${parent.id}`}>
+                  <tr>
                     <td className="px-6 py-4">
                       <div className="font-medium">
-                        {parent.firstName} {parent.middleName} {parent.lastName}
+                        {parent.firstName} {parent.lastName}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-slate-400">
                         {parent.email}
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
-                      {parent.contactNo || '—'}
-                    </td>
-
-                    <td className="px-6 py-4 truncate">
-                      {parent.address || '—'}
-                    </td>
+                    <td className="px-6 py-4">{parent.contactNo || '—'}</td>
+                    <td className="px-6 py-4 truncate">{parent.address || '—'}</td>
 
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => toggleChildren(parent.id)}
-                        className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs hover:bg-blue-700 transition"
+                        className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs"
                       >
                         {expandedParentId === parent.id
                           ? 'Hide Children'
@@ -252,28 +240,63 @@ export default function ParentsPage() {
 
                   {expandedParentId === parent.id && (
                     <tr className="bg-slate-50">
-                      <td colSpan={4} className="px-6 py-4">
-                        {children[parent.id]?.length ? (
-                          <div className="space-y-2">
-                            {children[parent.id].map(child => (
-                              <div
-                                key={child.child_id}
-                                className="flex justify-between text-sm"
-                              >
-                                <span>
-                                  {child.first_name} {child.last_name}
-                                </span>
-                                <span className="text-slate-400">
-                                  {child.date_of_birth || ''}
-                                </span>
+                      <td colSpan={4} className="px-6 py-4 space-y-3">
+                        {children[parent.id]?.map(child => (
+                          <div
+                            key={`child-${child.id}`}
+                            className="bg-white border rounded-xl"
+                          >
+                            <button
+                              onClick={() => toggleChildRecords(child.id)}
+                              className="w-full px-4 py-3 flex justify-between"
+                            >
+                              <div>
+                                <div className="font-medium">
+                                  {child.firstName} {child.lastName}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  {child.birthDate
+                                    ? new Date(child.birthDate).toLocaleDateString()
+                                    : ''}
+                                </div>
                               </div>
-                            ))}
+
+                              <span className="text-xs text-blue-600">
+                                {expandedChildId === child.id
+                                  ? 'Hide Records'
+                                  : 'View Records'}
+                              </span>
+                            </button>
+
+                            {expandedChildId === child.id && (
+                              <div className="px-4 pb-4 space-y-2">
+                                {childRecords[child.id]?.records.length === 0 ? (
+                                  <div className="text-xs text-slate-400">
+                                    No immunization records yet
+                                  </div>
+                                ) : (
+                                  childRecords[child.id]?.records.map(record => (
+                                    <div
+                                      key={`record-${record.id}`}
+                                      className="flex justify-between text-xs border-b py-1"
+                                    >
+                                      <span>{record.vaccine.name}</span>
+                                      <span
+                                        className={
+                                          record.status.code === 'COMPLETED'
+                                            ? 'text-green-600'
+                                            : 'text-yellow-600'
+                                        }
+                                      >
+                                        {record.status.code}
+                                      </span>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <div className="text-slate-400 text-sm">
-                            No children found
-                          </div>
-                        )}
+                        ))}
                       </td>
                     </tr>
                   )}
@@ -283,24 +306,22 @@ export default function ParentsPage() {
           </table>
         </div>
 
-        {/* ================= PAGINATION ================= */}
+        {/* PAGINATION */}
         <div className="flex justify-end gap-3">
           <button
             disabled={pagination.page <= 1}
             onClick={() => goToPage(pagination.page - 1)}
-            className="px-4 py-2 rounded-xl bg-slate-100 text-sm disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-slate-100 text-sm"
           >
             Prev
           </button>
-
-          <span className="text-sm text-slate-500">
-            Page {pagination.page} of {pagination.totalPages}
+          <span className="text-sm">
+            Page {pagination.page} / {pagination.totalPages}
           </span>
-
           <button
             disabled={pagination.page >= pagination.totalPages}
             onClick={() => goToPage(pagination.page + 1)}
-            className="px-4 py-2 rounded-xl bg-slate-100 text-sm disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-slate-100 text-sm"
           >
             Next
           </button>
@@ -310,7 +331,7 @@ export default function ParentsPage() {
           open={alert.open}
           type={alert.type}
           message={alert.message}
-          onClose={() => setAlert(p => ({ ...p, open: false }))}
+          onClose={() => setAlert(a => ({ ...a, open: false }))}
         />
       </div>
     </AuthGuard>
