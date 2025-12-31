@@ -32,7 +32,7 @@ const links = [
   { href: '/admin/children', label: 'Children record', icon: Baby },
   { href: '/admin/parents', label: 'Parent Management', icon: Users },
 
-  { href: '/admin/immunization', label: 'Immunization', icon: Syringe },
+  { href: '/admin/immunization', label: 'Immunization Record', icon: Syringe },
   { href: '/admin/vaccines', label: 'Vaccine Management', icon: Syringe },
 
   // 👇 Access Control (clean separation)
