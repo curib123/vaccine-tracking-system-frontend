@@ -29,7 +29,7 @@ type SidebarProps = {
 const links = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 
-  { href: '/admin/children', label: 'Children Records', icon: Baby },
+  { href: '/admin/children', label: 'Children record', icon: Baby },
   { href: '/admin/parents', label: 'Parent Management', icon: Users },
 
   { href: '/admin/immunization', label: 'Immunization', icon: Syringe },
