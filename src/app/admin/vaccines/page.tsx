@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Fragment,
   useEffect,
   useMemo,
   useState,
@@ -41,6 +42,8 @@ type Pagination = {
 function VaccinePageContent() {
   /* ================= STATE ================= */
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     limit: 10,
@@ -102,36 +105,9 @@ function VaccinePageContent() {
     [vaccines]
   );
 
-  /* ================= HELPERS ================= */
-  const renderScheduleInfo = (schedules?: Schedule[]) => {
-    if (!schedules || schedules.length === 0) {
-      return <span className="text-slate-400">—</span>;
-    }
-
-    return (
-      <div className="space-y-1">
-        <span className="font-medium">
-          {schedules.length} dose
-          {schedules.length > 1 ? 's' : ''}
-        </span>
-        <div className="text-xs text-slate-500">
-          {schedules.map((s, i) => (
-            <div key={i}>
-              {s.doseLabel || `Dose ${s.doseNumber}`}
-              {s.intervalDays
-                ? ` • +${s.intervalDays} days`
-                : ''}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   /* ================= RENDER ================= */
   return (
     <div className="bg-slate-50 px-6 py-8 space-y-8">
-
       {/* HEADER */}
       <header className="flex justify-between items-center">
         <div>
@@ -139,7 +115,7 @@ function VaccinePageContent() {
             Vaccine Management
           </h1>
           <p className="text-sm text-slate-500">
-            Manage vaccines, doses, and scheduling intervals
+            Manage vaccines and their immunization schedules
           </p>
         </div>
 
@@ -187,27 +163,12 @@ function VaccinePageContent() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
-              <th className="px-6 py-3 text-left font-medium">
-                Vaccine
-              </th>
-              <th className="px-6 py-3 text-left font-medium">
-                Recommended Age
-              </th>
-              <th className="px-6 py-3 text-left font-medium">
-                Doses
-              </th>
-              <th className="px-6 py-3 text-left font-medium">
-                Booster
-              </th>
-              <th className="px-6 py-3 text-left font-medium">
-                Schedule Details
-              </th>
-              <th className="px-6 py-3 text-left font-medium">
-                Created
-              </th>
-              <th className="px-6 py-3 text-right font-medium">
-                Actions
-              </th>
+              <th className="px-6 py-3 text-left font-medium">Vaccine</th>
+              <th className="px-6 py-3 text-left font-medium">Recommended Age</th>
+              <th className="px-6 py-3 text-left font-medium">Doses</th>
+              <th className="px-6 py-3 text-left font-medium">Booster</th>
+              <th className="px-6 py-3 text-left font-medium">Created</th>
+              <th className="px-6 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
 
@@ -215,7 +176,7 @@ function VaccinePageContent() {
             {!hasData && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="py-14 text-center text-slate-400"
                 >
                   No vaccines found
@@ -224,67 +185,113 @@ function VaccinePageContent() {
             )}
 
             {vaccines.map(v => (
-              <tr
-                key={v.id}
-                className="hover:bg-slate-50 transition"
-              >
-                <td className="px-6 py-4 font-medium text-slate-800">
-                  {v.name}
-                </td>
+              <Fragment key={v.id}>
+                {/* MAIN ROW */}
+                <tr className="hover:bg-slate-50 transition">
+                  <td className="px-6 py-4 font-medium text-slate-800">
+                    {v.name}
+                  </td>
 
-                <td className="px-6 py-4 text-slate-500">
-                  {v.recommendedAge}
-                </td>
+                  <td className="px-6 py-4 text-slate-500">
+                    {v.recommendedAge}
+                  </td>
 
-                <td className="px-6 py-4 text-slate-500">
-                  {v.totalDoses ?? '—'}
-                </td>
+                  <td className="px-6 py-4 text-slate-500">
+                    {v.totalDoses ?? '—'}
+                  </td>
 
-                <td className="px-6 py-4">
-                  {v.requiresBooster ? (
-                    <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">
-                      Yes
-                      {v.boosterAfterMonths
-                        ? ` (${v.boosterAfterMonths}m)`
-                        : ''}
-                    </span>
-                  ) : (
-                    <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs">
-                      No
-                    </span>
-                  )}
-                </td>
+                  <td className="px-6 py-4">
+                    {v.requiresBooster ? (
+                      <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">
+                        Yes
+                        {v.boosterAfterMonths
+                          ? ` (${v.boosterAfterMonths}m)`
+                          : ''}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs">
+                        No
+                      </span>
+                    )}
+                  </td>
 
-                <td className="px-6 py-4 text-slate-600">
-                  {renderScheduleInfo(v.schedules)}
-                </td>
+                  <td className="px-6 py-4 text-slate-500">
+                    {new Date(v.createdAt).toLocaleDateString()}
+                  </td>
 
-                <td className="px-6 py-4 text-slate-500">
-                  {new Date(v.createdAt).toLocaleDateString()}
-                </td>
+                  <td className="px-6 py-4 text-right space-x-2">
+                    <button
+                      onClick={() =>
+                        setExpandedId(
+                          expandedId === v.id ? null : v.id
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs"
+                    >
+                      {expandedId === v.id
+                        ? 'Hide Schedule'
+                        : 'View Schedule'}
+                    </button>
 
-                <td className="px-6 py-4 text-right space-x-2">
-                  <button
-                    onClick={() => {
-                      setSelectedId(v.id);
-                      setModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow hover:shadow-md transition text-xs"
-                  >
-                    Edit
-                  </button>
+                    <button
+                      onClick={() => {
+                        setSelectedId(v.id);
+                        setModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow hover:shadow-md transition text-xs"
+                    >
+                      Edit
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      setDeleteId(v.id);
-                      setAlertOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-red-600 shadow hover:shadow-md transition text-xs"
-                  >
-                    Remove
-                  </button>
-                </td>
-              </tr>
+                    <button
+                      onClick={() => {
+                        setDeleteId(v.id);
+                        setAlertOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-white text-red-600 shadow hover:shadow-md transition text-xs"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+
+                {/* COLLAPSIBLE SCHEDULE ROW */}
+                {expandedId === v.id && (
+                  <tr className="bg-slate-50">
+                    <td colSpan={6} className="px-8 py-4">
+                      <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                        Immunization Schedule
+                      </h4>
+
+                      {!v.schedules?.length ? (
+                        <p className="text-sm text-slate-400">
+                          No schedules defined
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {v.schedules.map(s => (
+                            <div
+                              key={`${v.id}-${s.doseNumber}`}
+                              className="rounded-lg border bg-white p-3 text-sm"
+                            >
+                              <div className="font-medium text-slate-800">
+                                {s.doseLabel || `Dose ${s.doseNumber}`}
+                              </div>
+
+                              <div className="text-xs text-slate-500">
+                                Age: {s.recommendedAgeInMonths} month(s)
+                                {s.intervalDays
+                                  ? ` • Interval: ${s.intervalDays} days`
+                                  : ''}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -308,9 +315,7 @@ function VaccinePageContent() {
             </button>
 
             <button
-              disabled={
-                pagination.page === pagination.totalPages
-              }
+              disabled={pagination.page === pagination.totalPages}
               onClick={() =>
                 fetchVaccines(pagination.page + 1)
               }

@@ -8,6 +8,8 @@ import {
 
 import AuthGuard from '@/components/guards/AuthGuard';
 import AlertModal from '@/components/modal/AlertModal';
+import GenerateVaccineModal
+  from '@/components/modal/GenerateVaccineModal'; // 🆕
 import UpsertChildModal from '@/components/modal/UpsertChildModal';
 import api from '@/lib/api';
 
@@ -51,6 +53,11 @@ function ChildrenPageContent() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
+  // 🆕 Generate vaccine modal state
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [generateChildId, setGenerateChildId] =
+    useState<number | null>(null);
+
   /* ================= LOAD ================= */
   useEffect(() => {
     fetchChildren(1);
@@ -65,7 +72,10 @@ function ChildrenPageContent() {
 
     if (search) params.search = search;
 
-    const { data } = await api.get('/child/getAllChildren', { params });
+    const { data } = await api.get(
+      '/child/getAllChildren',
+      { params }
+    );
 
     setChildren(data.data || []);
     setPagination(data.pagination);
@@ -77,18 +87,22 @@ function ChildrenPageContent() {
   const confirmDelete = async () => {
     if (!deleteId) return;
 
-    await api.patch(`/child/toggleIsDeleted/${deleteId}`);
+    await api.patch(
+      `/child/toggleIsDeleted/${deleteId}`
+    );
     setAlertOpen(false);
     reload();
   };
 
   /* ================= MEMO ================= */
-  const hasData = useMemo(() => children.length > 0, [children]);
+  const hasData = useMemo(
+    () => children.length > 0,
+    [children]
+  );
 
   /* ================= RENDER ================= */
   return (
     <div className="bg-slate-50 px-6 py-8 space-y-8">
-
       {/* HEADER */}
       <header className="flex justify-between items-center">
         <div>
@@ -126,12 +140,24 @@ function ChildrenPageContent() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
-              <th className="px-6 py-3 text-left font-medium">Child</th>
-              <th className="px-6 py-3 text-left font-medium">Gender</th>
-              <th className="px-6 py-3 text-left font-medium">Birth Date</th>
-              <th className="px-6 py-3 text-left font-medium">Birth Place</th>
-              <th className="px-6 py-3 text-left font-medium">Parent</th>
-              <th className="px-6 py-3 text-right font-medium">Actions</th>
+              <th className="px-6 py-3 text-left font-medium">
+                Child
+              </th>
+              <th className="px-6 py-3 text-left font-medium">
+                Gender
+              </th>
+              <th className="px-6 py-3 text-left font-medium">
+                Birth Date
+              </th>
+              <th className="px-6 py-3 text-left font-medium">
+                Birth Place
+              </th>
+              <th className="px-6 py-3 text-left font-medium">
+                Parent
+              </th>
+              <th className="px-6 py-3 text-right font-medium">
+                Actions
+              </th>
             </tr>
           </thead>
 
@@ -148,9 +174,13 @@ function ChildrenPageContent() {
             )}
 
             {children.map(c => (
-              <tr key={c.id} className="hover:bg-slate-50 transition">
+              <tr
+                key={c.id}
+                className="hover:bg-slate-50 transition"
+              >
                 <td className="px-6 py-4 font-medium text-slate-800">
-                  {c.firstName} {c.middleName} {c.lastName}
+                  {c.firstName} {c.middleName}{' '}
+                  {c.lastName}
                 </td>
 
                 <td className="px-6 py-4 text-slate-500">
@@ -158,7 +188,9 @@ function ChildrenPageContent() {
                 </td>
 
                 <td className="px-6 py-4 text-slate-500">
-                  {new Date(c.birthDate).toLocaleDateString()}
+                  {new Date(
+                    c.birthDate
+                  ).toLocaleDateString()}
                 </td>
 
                 <td className="px-6 py-4 text-slate-500">
@@ -172,6 +204,17 @@ function ChildrenPageContent() {
                 </td>
 
                 <td className="px-6 py-4 text-right space-x-2">
+                  {/* 🆕 GENERATE VACCINE */}
+                  <button
+                    onClick={() => {
+                      setGenerateChildId(c.id);
+                      setGenerateOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-white text-green-600 shadow hover:shadow-md transition text-xs"
+                  >
+                    Add Vaccine Record
+                  </button>
+
                   <button
                     onClick={() => {
                       setSelectedId(c.id);
@@ -200,22 +243,29 @@ function ChildrenPageContent() {
         {/* PAGINATION */}
         <div className="flex items-center justify-between px-6 py-4 text-sm text-slate-500">
           <span>
-            Page <strong>{pagination.page}</strong> of{' '}
+            Page <strong>{pagination.page}</strong>{' '}
+            of{' '}
             <strong>{pagination.totalPages}</strong>
           </span>
 
           <div className="flex gap-2">
             <button
               disabled={pagination.page === 1}
-              onClick={() => fetchChildren(pagination.page - 1)}
+              onClick={() =>
+                fetchChildren(pagination.page - 1)
+              }
               className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40"
             >
               Previous
             </button>
 
             <button
-              disabled={pagination.page === pagination.totalPages}
-              onClick={() => fetchChildren(pagination.page + 1)}
+              disabled={
+                pagination.page === pagination.totalPages
+              }
+              onClick={() =>
+                fetchChildren(pagination.page + 1)
+              }
               className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40"
             >
               Next
@@ -230,6 +280,21 @@ function ChildrenPageContent() {
         childId={selectedId}
         onClose={() => setModalOpen(false)}
         onSaved={reload}
+      />
+
+      {/* 🆕 GENERATE VACCINE MODAL */}
+      <GenerateVaccineModal
+        open={generateOpen}
+        childId={generateChildId}
+        onClose={() => {
+          setGenerateOpen(false);
+          setGenerateChildId(null);
+        }}
+        onGenerated={() => {
+          setGenerateOpen(false);
+          setGenerateChildId(null);
+          reload();
+        }}
       />
 
       <AlertModal

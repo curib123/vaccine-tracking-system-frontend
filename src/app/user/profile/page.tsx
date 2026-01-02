@@ -7,6 +7,7 @@ import {
 
 import { useRouter } from 'next/navigation';
 
+import ParentAuthGuard from '@/components/guards/ParentGuard';
 import AlertModal from '@/components/modal/AlertModal';
 import api from '@/lib/api';
 
@@ -24,6 +25,15 @@ type UserProfile = {
 
 /* ================= PAGE ================= */
 export default function ProfilePage() {
+  return (
+    <ParentAuthGuard>
+      <ProfileContent />
+    </ParentAuthGuard>
+  );
+}
+
+/* ================= CONTENT ================= */
+function ProfileContent() {
   const router = useRouter();
 
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -107,7 +117,8 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  const fullName = `${user.firstName} ${user.middleName || ''} ${user.lastName}`.trim();
+  const fullName =
+    `${user.firstName} ${user.middleName || ''} ${user.lastName}`.trim();
 
   /* ================= UI ================= */
   return (
@@ -124,11 +135,13 @@ export default function ProfilePage() {
 
           {/* Avatar */}
           <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-20">
-            <div className="w-32 h-32 rounded-full
+            <div
+              className="w-32 h-32 rounded-full
               bg-gradient-to-br from-[#0B4FB3] to-[#1E7CF2]
               border-[5px] border-white shadow-2xl
               flex items-center justify-center
-              text-white text-4xl font-bold">
+              text-white text-4xl font-bold"
+            >
               {user.firstName.charAt(0)}
             </div>
           </div>

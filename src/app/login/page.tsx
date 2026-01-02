@@ -63,14 +63,14 @@ function LoginContent() {
         .toUpperCase();
 
       const PARENT_ROLE = String(
-        process.env.NEXT_PUBLIC_PARENT_ROLE_NAME || 'PARENT/GUARDIAN'
+        process.env.NEXT_PUBLIC_PARENT_ROLE_NAME  || 'PARENT/GUARDIAN'
       )
         .trim()
         .toUpperCase();
 
       const redirectTo =
         roleName === PARENT_ROLE
-          ? '/user'
+          ? '/user/dashboard'
           : '/admin/dashboard';
 
       setAlert({

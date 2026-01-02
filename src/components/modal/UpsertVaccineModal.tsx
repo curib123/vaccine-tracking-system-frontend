@@ -55,6 +55,7 @@ const label =
 const guide =
   'mt-1 text-xs text-slate-500 leading-relaxed';
 
+/* ================= COMPONENT ================= */
 function UpsertVaccineModalContent({
   open,
   vaccineId,
@@ -100,13 +101,13 @@ function UpsertVaccineModalContent({
         setAlert({
           open: true,
           type: 'error',
-          message: 'Failed to load vaccine data',
+          message: 'Failed to load vaccine data.',
         });
       }
     })();
   }, [open, vaccineId, isEdit]);
 
-  /* ================= SCHEDULE HELPERS ================= */
+  /* ================= DOSE SCHEDULE HELPERS ================= */
   const addSchedule = () =>
     setForm({
       ...form,
@@ -144,7 +145,7 @@ function UpsertVaccineModalContent({
         open: true,
         type: 'error',
         message:
-          'Vaccine name and recommended age are required.',
+          'Vaccine name and recommended age description are required.',
       });
       return;
     }
@@ -153,10 +154,7 @@ function UpsertVaccineModalContent({
 
     try {
       if (isEdit) {
-        await api.put(
-          `/vaccine/update/${vaccineId}`,
-          form
-        );
+        await api.put(`/vaccine/update/${vaccineId}`, form);
       } else {
         await api.post('/vaccine/create', form);
       }
@@ -165,8 +163,8 @@ function UpsertVaccineModalContent({
         open: true,
         type: 'success',
         message: isEdit
-          ? 'Vaccine updated successfully'
-          : 'Vaccine created successfully',
+          ? 'Vaccine updated successfully.'
+          : 'Vaccine created successfully.',
       });
 
       onSaved();
@@ -176,7 +174,7 @@ function UpsertVaccineModalContent({
         type: 'error',
         message:
           err?.response?.data?.message ||
-          'Failed to save vaccine',
+          'Failed to save vaccine.',
       });
     } finally {
       setSaving(false);
@@ -197,8 +195,9 @@ function UpsertVaccineModalContent({
               {isEdit ? 'Update Vaccine' : 'Create Vaccine'}
             </h2>
             <p className="text-sm text-slate-500">
-              Fill in each field using the guide below to ensure
-              accurate immunization scheduling.
+              Define vaccine information and dose schedules.
+              These schedules are used to automatically generate
+              child immunization records.
             </p>
           </div>
 
@@ -221,14 +220,16 @@ function UpsertVaccineModalContent({
                   }
                 />
                 <p className={guide}>
-                  What to put: Official or commonly used name of
-                  the vaccine.<br />
+                  Official or commonly used vaccine name.
+                  <br />
                   Example: <b>BCG</b>, <b>Pentavalent</b>, <b>MMR</b>
                 </p>
               </div>
 
               <div>
-                <label className={label}>Recommended Age</label>
+                <label className={label}>
+                  Recommended Age (Text)
+                </label>
                 <input
                   className={input}
                   value={form.recommendedAge}
@@ -240,14 +241,16 @@ function UpsertVaccineModalContent({
                   }
                 />
                 <p className={guide}>
-                  What to put: Age when the vaccine should be
-                  administered.<br />
+                  Human-readable guidance shown to users.
+                  <br />
                   Example: <b>At birth</b>, <b>6 weeks</b>, <b>9 months</b>
                 </p>
               </div>
 
               <div>
-                <label className={label}>Total Number of Doses</label>
+                <label className={label}>
+                  Total Required Doses
+                </label>
                 <input
                   type="number"
                   className={input}
@@ -255,13 +258,14 @@ function UpsertVaccineModalContent({
                   onChange={e =>
                     setForm({
                       ...form,
-                      totalDoses: Number(e.target.value),
+                      totalDoses: Number(e.target.value) || '',
                     })
                   }
                 />
                 <p className={guide}>
-                  What to put: Number of doses required to complete
-                  this vaccine.<br />
+                  Total number of doses required to complete
+                  this vaccine (excluding boosters).
+                  <br />
                   Example: <b>1</b>, <b>2</b>, <b>3</b>
                 </p>
               </div>
@@ -280,9 +284,8 @@ function UpsertVaccineModalContent({
                   }
                 />
                 <p className={guide}>
-                  What to put: Short explanation of what disease
-                  the vaccine prevents.<br />
-                  Example: <b>Protects infants from tuberculosis</b>
+                  Short description of the disease(s) this
+                  vaccine prevents.
                 </p>
               </div>
             </section>
@@ -290,17 +293,18 @@ function UpsertVaccineModalContent({
             {/* BOOSTER */}
             <section className="rounded-2xl border p-5 space-y-4">
               <h3 className="text-sm font-semibold text-slate-800">
-                Booster Information
+                Booster Configuration
               </h3>
 
               <p className={guide}>
                 Enable this only if the vaccine requires an
-                additional booster dose after the main doses.
+                additional booster dose after completing
+                the primary doses.
               </p>
 
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">
-                  Requires Booster Dose?
+                  Requires Booster Dose
                 </span>
                 <button
                   onClick={() =>
@@ -337,29 +341,31 @@ function UpsertVaccineModalContent({
                     onChange={e =>
                       setForm({
                         ...form,
-                        boosterAfterMonths: Number(e.target.value),
+                        boosterAfterMonths:
+                          Number(e.target.value) || '',
                       })
                     }
                   />
                   <p className={guide}>
-                    What to put: Months after the last dose before
-                    giving the booster.<br />
+                    Number of months after the final
+                    primary dose before giving the booster.
+                    <br />
                     Example: <b>12</b> (booster after 1 year)
                   </p>
                 </div>
               )}
             </section>
 
-            {/* SCHEDULE */}
+            {/* DOSE SCHEDULE */}
             <section className="rounded-2xl border p-5 space-y-4">
               <h3 className="text-sm font-semibold text-slate-800">
-                Immunization Schedule
+                Dose Schedule Rules
               </h3>
 
               <p className={guide}>
-                Define the schedule for each dose. This is used
-                by the system to auto-generate child immunization
-                records and calculate next due dates.
+                Each schedule defines <b>one dose rule</b>.
+                The system uses these rules to automatically
+                generate immunization records for every child.
               </p>
 
               <button
@@ -380,14 +386,12 @@ function UpsertVaccineModalContent({
                       className={input}
                       value={s.doseLabel}
                       onChange={e =>
-                        updateSchedule(
-                          i,
-                          'doseLabel',
-                          e.target.value
-                        )
+                        updateSchedule(i, 'doseLabel', e.target.value)
                       }
                     />
                     <p className={guide}>
+                      Display label for this dose.
+                      <br />
                       Example: <b>1st Dose</b>, <b>2nd Dose</b>, <b>Booster</b>
                     </p>
                   </div>
@@ -407,7 +411,9 @@ function UpsertVaccineModalContent({
                       }
                     />
                     <p className={guide}>
-                      Example: <b>1</b> for first dose, <b>2</b> for second
+                      Order of the dose in the vaccine series.
+                      <br />
+                      Example: <b>1</b> = first dose, <b>2</b> = second
                     </p>
                   </div>
 
@@ -428,6 +434,8 @@ function UpsertVaccineModalContent({
                       }
                     />
                     <p className={guide}>
+                      Age in months when this dose is due.
+                      <br />
                       Example: <b>0</b> (birth), <b>6</b>, <b>9</b>
                     </p>
                   </div>
@@ -444,14 +452,15 @@ function UpsertVaccineModalContent({
                         updateSchedule(
                           i,
                           'intervalDays',
-                          Number(e.target.value)
+                          Number(e.target.value) || ''
                         )
                       }
                     />
                     <p className={guide}>
-                      What to put: Number of days to wait after
-                      the previous dose.<br />
-                      Leave blank or <b>0</b> for the first dose.<br />
+                      Number of days to wait after the previous dose.
+                      <br />
+                      Leave blank for the first dose.
+                      <br />
                       Example: <b>28</b>, <b>30</b>, <b>60</b>
                     </p>
                   </div>

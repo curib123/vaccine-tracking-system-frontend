@@ -8,14 +8,28 @@ export default function Topbar({
   onMenu: () => void;
 }) {
   return (
-    <header className="h-14 bg-white border-b flex items-center px-4">
-      <button onClick={onMenu}>
-        <Menu className="w-6 h-6 text-slate-700" />
-      </button>
+    <header className="sticky top-0 z-30">
+      <div className="flex h-14 items-center gap-3 bg-white/90 px-4 backdrop-blur shadow-sm ring-1 ring-black/5">
+        {/* Menu Button */}
+        <button
+          onClick={onMenu}
+          className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-slate-100 active:bg-slate-200 transition"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5 text-slate-700" />
+        </button>
 
-      <h1 className="ml-4 font-semibold text-slate-800">
-        Health Center
-      </h1>
+        {/* Title */}
+        <h1 className="ml-1 text-base font-semibold tracking-tight text-slate-900">
+          Health Center
+        </h1>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Accent Dot (optional, subtle branding) */}
+        <div className="h-2 w-2 rounded-full bg-blue-500" />
+      </div>
     </header>
   );
 }

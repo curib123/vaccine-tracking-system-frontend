@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import AuthGuard from '@/components/guards/AuthGuard';
+import ParentGuard from '@/components/guards/ParentGuard';
 import BottomNav from '@/components/layoutMobile/BottomNav';
 import MobileDrawer from '@/components/layoutMobile/Drawer';
 import Sidebar from '@/components/layoutMobile/Sidebar';
@@ -16,7 +16,7 @@ export default function ProtectedLayout({
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <AuthGuard>
+    <ParentGuard>
       <div className="min-h-screen bg-slate-50 flex">
 
         {/* Desktop Sidebar */}
@@ -49,6 +49,6 @@ export default function ProtectedLayout({
           onClose={() => setDrawerOpen(false)}
         />
       </div>
-    </AuthGuard>
+    </ParentGuard>
   );
 }
