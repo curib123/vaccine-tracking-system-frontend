@@ -7,6 +7,7 @@ import {
 
 import {
   Baby,
+  CalendarDays,
   LayoutDashboard,
   LogOut,
   Shield,
@@ -56,7 +57,7 @@ type UserSession = {
   permissions?: Permission[];
 };
 
-/* ================= LINKS WITH PERMISSIONS ================= */
+/* ================= LINKS ================= */
 const links = [
   {
     href: '/admin/dashboard',
@@ -72,7 +73,7 @@ const links = [
   },
   {
     href: '/admin/children',
-    label: 'Children record',
+    label: 'Children Records',
     icon: Baby,
     required: PermissionCode.MANAGE_CHILDREN,
   },
@@ -83,8 +84,14 @@ const links = [
     required: PermissionCode.MANAGE_PARENTS,
   },
   {
+    href: '/admin/visits',
+    label: 'Visits',
+    icon: CalendarDays,
+    required: PermissionCode.MANAGE_IMMUNIZATION,
+  },
+  {
     href: '/admin/immunization',
-    label: 'Immunization Record',
+    label: 'Immunization Records',
     icon: Syringe,
     required: PermissionCode.MANAGE_IMMUNIZATION,
   },
@@ -114,38 +121,48 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const router = useRouter();
 
   /* ================= PERMISSION STATE ================= */
-  const [permissionSet, setPermissionSet] = useState<Set<string>>(new Set());
+  const [permissionSet, setPermissionSet] =
+    useState<Set<string>>(new Set());
 
   useEffect(() => {
     const raw = sessionStorage.getItem('user');
     if (!raw) return;
 
-    const user: UserSession = JSON.parse(raw);
-    const perms = user.permissions?.map(p => p.code) || [];
-
-    setPermissionSet(new Set(perms));
+    try {
+      const user: UserSession = JSON.parse(raw);
+      const perms =
+        user.permissions?.map(p => p.code) || [];
+      setPermissionSet(new Set(perms));
+    } catch {
+      // ignore malformed session
+    }
   }, []);
 
   /* ================= ALERT STATE ================= */
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [alertType, setAlertType] = useState<'success' | 'error'>('success');
-  const [alertMessage, setAlertMessage] = useState('');
+  const [alert, setAlert] = useState({
+    open: false,
+    type: 'success' as 'success' | 'error',
+    message: '',
+  });
 
   /* ================= LOGOUT ================= */
   const logout = async () => {
     try {
       const res = await api.post('/auth/logoutUser');
 
-      setAlertType('success');
-      setAlertMessage(res.data?.message || 'Logout successful');
-      setAlertOpen(true);
+      setAlert({
+        open: true,
+        type: 'success',
+        message: res.data?.message || 'Logout successful',
+      });
     } catch (error: any) {
-      setAlertType('error');
-      setAlertMessage(
-        error?.response?.data?.message ||
-          'Logout failed. Please try again.'
-      );
-      setAlertOpen(true);
+      setAlert({
+        open: true,
+        type: 'error',
+        message:
+          error?.response?.data?.message ||
+          'Logout failed. Please try again.',
+      });
     }
   };
 
@@ -164,7 +181,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
           min-h-screen flex flex-col
           transition-all duration-300
           ${collapsed ? 'w-[88px]' : 'w-80'}
-          bg-linear-to-b from-[#0B4FB3] to-[#0A3F8F]
+          bg-gradient-to-b from-[#0B4FB3] to-[#0A3F8F]
           text-white
         `}
       >
@@ -216,7 +233,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                     flex items-center gap-4
                     px-5 py-3.5 rounded-xl
                     transition
-                    ${active ? 'bg-white/20' : 'hover:bg-white/10'}
+                    ${
+                      active
+                        ? 'bg-white/20'
+                        : 'hover:bg-white/10'
+                    }
                   `}
                 >
                   <Icon size={22} className="shrink-0" />
@@ -251,13 +272,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
       {/* ================= ALERT MODAL ================= */}
       <AlertModal
-        open={alertOpen}
-        type={alertType}
-        title={alertType === 'success' ? 'Logged out' : 'Logout failed'}
-        message={alertMessage}
+        open={alert.open}
+        type={alert.type}
+        message={alert.message}
         onClose={() => {
-          setAlertOpen(false);
-          if (alertType === 'success') handleLogoutDone();
+          setAlert(a => ({ ...a, open: false }));
+          if (alert.type === 'success') {
+            handleLogoutDone();
+          }
         }}
       />
     </>
