@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import AlertModal from '@/components/modal/AlertModal';
+import { ScreenShellSkeleton } from '@/components/ui/Shimmer';
 import useSessionGuard from '@/hooks/useSessionGuard';
 import api from '@/lib/api';
 
@@ -160,11 +161,7 @@ export default function ParentAuthGuard({
   }, [user, loading, parentRole, router, redirectTo]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500">
-        Checking session…
-      </div>
-    );
+    return <ScreenShellSkeleton />;
   }
 
   if (alert.open) {

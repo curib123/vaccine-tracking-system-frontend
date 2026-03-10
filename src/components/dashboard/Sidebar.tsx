@@ -206,7 +206,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               <span className="mt-4 text-2xl font-semibold tracking-wide">
                 ImmuniTrack
               </span>
-              <span className="mt-1 text-sm text-white/70">
+              <span className="mt-1 text-sm text-white">
                 Immunization Management System
               </span>
             </>

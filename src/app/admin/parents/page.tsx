@@ -14,6 +14,7 @@ import {
 
 import AuthGuard from '@/components/guards/AuthGuard';
 import AlertModal from '@/components/modal/AlertModal';
+import { TablePageSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -83,7 +84,7 @@ export default function ParentsPage() {
 
   const [expandedParentId, setExpandedParentId] = useState<number | null>(null);
   const [expandedChildId, setExpandedChildId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [pagination, setPagination] = useState<Pagination>({
     page,
@@ -181,6 +182,10 @@ export default function ParentsPage() {
   }, [queryKey]);
 
   /* ================= RENDER ================= */
+  if (loading) {
+    return <TablePageSkeleton columns={4} rows={6} showHeaderAction={false} />;
+  }
+
   return (
     <AuthGuard>
       <div className="space-y-6">

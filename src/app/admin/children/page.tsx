@@ -11,6 +11,7 @@ import AlertModal from '@/components/modal/AlertModal';
 import GenerateVaccineModal
   from '@/components/modal/GenerateVaccineModal'; // 🆕
 import UpsertChildModal from '@/components/modal/UpsertChildModal';
+import { TablePageSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -52,6 +53,7 @@ function ChildrenPageContent() {
 
   const [alertOpen, setAlertOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // 🆕 Generate vaccine modal state
   const [generateOpen, setGenerateOpen] = useState(false);
@@ -65,20 +67,26 @@ function ChildrenPageContent() {
   }, [search]);
 
   const fetchChildren = async (page: number) => {
-    const params: any = {
-      page,
-      limit: pagination.limit,
-    };
+    try {
+      setLoading(true);
 
-    if (search) params.search = search;
+      const params: any = {
+        page,
+        limit: pagination.limit,
+      };
 
-    const { data } = await api.get(
-      '/child/getAllChildren',
-      { params }
-    );
+      if (search) params.search = search;
 
-    setChildren(data.data || []);
-    setPagination(data.pagination);
+      const { data } = await api.get(
+        '/child/getAllChildren',
+        { params }
+      );
+
+      setChildren(data.data || []);
+      setPagination(data.pagination);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reload = () => fetchChildren(pagination.page);
@@ -99,6 +107,10 @@ function ChildrenPageContent() {
     () => children.length > 0,
     [children]
   );
+
+  if (loading) {
+    return <TablePageSkeleton columns={6} rows={6} />;
+  }
 
   /* ================= RENDER ================= */
   return (

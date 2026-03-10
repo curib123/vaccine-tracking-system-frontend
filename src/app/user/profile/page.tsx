@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 
 import ParentAuthGuard from '@/components/guards/ParentGuard';
 import AlertModal from '@/components/modal/AlertModal';
+import { ProfileSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -106,13 +107,7 @@ function ProfileContent() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#eef3f8]">
-        <span className="text-gray-500 animate-pulse">
-          Loading profile…
-        </span>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!user) return null;

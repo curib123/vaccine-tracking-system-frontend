@@ -6,6 +6,7 @@ import {
 } from 'react';
 
 import AuthGuard from '@/components/guards/AuthGuard';
+import { DashboardSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -56,11 +57,7 @@ function DashboardPageContent() {
   };
 
   if (loading) {
-    return (
-      <div className="h-[60vh] flex items-center justify-center text-slate-400">
-        Loading dashboard…
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (!data) return null;

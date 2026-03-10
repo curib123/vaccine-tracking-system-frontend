@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -12,17 +12,81 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes shimmer-slide {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 0%,
+    #f8fafc 45%,
+    #e2e8f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-slide 1.5s linear infinite;
+}
+
+@layer utilities {
+  .text-gray-800,
+  .text-gray-900,
+  .text-slate-800,
+  .text-slate-900,
+  .text-neutral-800,
+  .text-neutral-900 {
+    color: #0f172a;
+  }
+
+  .text-gray-400,
+  .text-gray-500,
+  .text-slate-400,
+  .text-slate-500,
+  .text-neutral-400,
+  .text-neutral-500 {
+    color: #334155;
+  }
+
+  .text-gray-600,
+  .text-gray-700,
+  .text-slate-600,
+  .text-slate-700,
+  .text-neutral-600,
+  .text-neutral-700 {
+    color: #1f2937;
+  }
+
+  .text-white\/70,
+  .text-white\/80,
+  .text-white\/90 {
+    color: #ffffff;
+    opacity: 1;
+  }
+}
+
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled,
+[aria-disabled='true'] {
+  opacity: 1;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #475569;
+  opacity: 1;
 }
 
 .btn-blue {

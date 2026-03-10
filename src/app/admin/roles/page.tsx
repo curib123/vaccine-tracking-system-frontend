@@ -14,6 +14,7 @@ import {
 import AuthGuard from '@/components/guards/AuthGuard';
 import AlertModal from '@/components/modal/AlertModal';
 import RoleModal from '@/components/modal/RoleModal';
+import { TablePageSkeleton } from '@/components/ui/Shimmer';
 import useSessionGuard from '@/hooks/useSessionGuard';
 import api from '@/lib/api';
 
@@ -36,7 +37,7 @@ function RolesPageContent() {
   useSessionGuard({ mode: 'protected', redirectTo: '/login' });
 
   const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   /* Modals */
   const [openRoleModal, setOpenRoleModal] = useState(false);
@@ -109,6 +110,10 @@ function RolesPageContent() {
   };
 
   /* ================= RENDER ================= */
+  if (loading) {
+    return <TablePageSkeleton columns={3} rows={5} showFilters={false} />;
+  }
+
   return (
     <div className="bg-slate-50 min-h-screen px-6 py-8 space-y-8">
 

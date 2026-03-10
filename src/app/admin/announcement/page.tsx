@@ -8,6 +8,7 @@ import {
 import AlertModal from '@/components/modal/AlertModal';
 import UpsertAnnouncementModal
   from '@/components/modal/UpsertAnnouncementModal';
+import { TablePageSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -38,7 +39,7 @@ export default function AnnouncementPage() {
     total: 0,
     totalPages: 1,
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   /* MODALS */
   const [openUpsert, setOpenUpsert] = useState(false);
@@ -110,6 +111,10 @@ export default function AnnouncementPage() {
   };
 
   /* ================= UI ================= */
+  if (loading) {
+    return <TablePageSkeleton columns={5} rows={6} />;
+  }
+
   return (
     <>
       <div className="space-y-6">
@@ -159,16 +164,7 @@ export default function AnnouncementPage() {
     </thead>
 
     <tbody className="divide-y">
-      {loading ? (
-        <tr>
-          <td
-            colSpan={5}
-            className="px-5 py-8 text-center text-gray-500"
-          >
-            Loading announcements…
-          </td>
-        </tr>
-      ) : announcements.length === 0 ? (
+      {announcements.length === 0 ? (
         <tr>
           <td
             colSpan={5}

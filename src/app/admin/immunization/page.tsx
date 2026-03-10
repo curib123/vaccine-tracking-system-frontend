@@ -8,6 +8,7 @@ import {
 } from 'react';
 
 import AuthGuard from '@/components/guards/AuthGuard';
+import { TablePageSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -83,6 +84,7 @@ function RecordsPageContent() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] =
     useState('');
+  const [loading, setLoading] = useState(true);
 
   const [expandedVisitId, setExpandedVisitId] =
     useState<number | null>(null);
@@ -107,20 +109,26 @@ function RecordsPageContent() {
   };
 
   const fetchRecords = async (page: number) => {
-    const params: any = {
-      page,
-      limit: pagination.limit,
-    };
+    try {
+      setLoading(true);
 
-    if (search) params.search = search;
-    if (statusFilter) params.status = statusFilter;
+      const params: any = {
+        page,
+        limit: pagination.limit,
+      };
 
-    const { data } = await api.get('/records', {
-      params,
-    });
+      if (search) params.search = search;
+      if (statusFilter) params.status = statusFilter;
 
-    setRecords(data.data || []);
-    setPagination(data.pagination);
+      const { data } = await api.get('/records', {
+        params,
+      });
+
+      setRecords(data.data || []);
+      setPagination(data.pagination);
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ---------- VISIT DETAILS ---------- */
@@ -167,6 +175,10 @@ function RecordsPageContent() {
   };
 
   /* ---------- RENDER ---------- */
+  if (loading) {
+    return <TablePageSkeleton columns={5} rows={6} showHeaderAction={false} />;
+  }
+
   return (
     <div className="bg-slate-50 px-6 py-8 space-y-6">
       {/* HEADER */}

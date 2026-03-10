@@ -10,6 +10,7 @@ import {
 import AuthGuard from '@/components/guards/AuthGuard';
 import AlertModal from '@/components/modal/AlertModal';
 import UpsertVaccineModal from '@/components/modal/UpsertVaccineModal';
+import { TablePageSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -62,6 +63,7 @@ function VaccinePageContent() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [deleteId, setDeleteId] =
     useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -70,22 +72,28 @@ function VaccinePageContent() {
   }, [search, sortBy, sortOrder]);
 
   const fetchVaccines = async (page: number) => {
-    const params: any = {
-      page,
-      limit: pagination.limit,
-      sortBy,
-      sortOrder,
-    };
+    try {
+      setLoading(true);
 
-    if (search) params.search = search;
+      const params: any = {
+        page,
+        limit: pagination.limit,
+        sortBy,
+        sortOrder,
+      };
 
-    const { data } = await api.get(
-      '/vaccine/getAllVaccines',
-      { params }
-    );
+      if (search) params.search = search;
 
-    setVaccines(data.data || []);
-    setPagination(data.pagination);
+      const { data } = await api.get(
+        '/vaccine/getAllVaccines',
+        { params }
+      );
+
+      setVaccines(data.data || []);
+      setPagination(data.pagination);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reload = () => fetchVaccines(pagination.page);
@@ -104,6 +112,10 @@ function VaccinePageContent() {
     () => vaccines.length > 0,
     [vaccines]
   );
+
+  if (loading) {
+    return <TablePageSkeleton columns={6} rows={6} />;
+  }
 
   /* ================= RENDER ================= */
   return (

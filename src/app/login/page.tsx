@@ -110,10 +110,10 @@ function LoginContent() {
         />
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-[#eaf2f8]/40 to-[#d6e6f2]/60" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white via-[#eaf2f8] to-[#d6e6f2]" />
 
         {/* Card */}
-        <div className="relative z-10 w-full max-w-md bg-white/90 backdrop-blur-md rounded-[32px] shadow-xl px-8 pt-20 pb-10">
+        <div className="relative z-10 w-full max-w-md rounded-[32px] bg-white px-8 pt-20 pb-10 shadow-xl">
 
           {/* Logo */}
           <div className="absolute -top-14 left-1/2 -translate-x-1/2">

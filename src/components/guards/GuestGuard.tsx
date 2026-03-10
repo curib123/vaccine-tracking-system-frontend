@@ -1,5 +1,6 @@
 'use client';
 
+import { ScreenShellSkeleton } from '@/components/ui/Shimmer';
 import useSessionGuard from '@/hooks/useSessionGuard';
 
 type Props = {
@@ -17,11 +18,7 @@ export default function GuestGuard({
   });
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-600">
-        Checking session…
-      </div>
-    );
+    return <ScreenShellSkeleton />;
   }
 
   return <>{children}</>;

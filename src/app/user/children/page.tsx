@@ -15,6 +15,7 @@ import {
 
 import ParentGuard from '@/components/guards/ParentGuard';
 import AlertModal from '@/components/modal/AlertModal';
+import { CardListSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* =====================================================
@@ -464,22 +465,5 @@ function Empty() {
 }
 
 function Skeleton() {
-  return (
-    <div className="space-y-4 animate-pulse">
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5"
-        >
-          <div className="flex gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-slate-200" />
-            <div className="flex-1">
-              <div className="h-4 w-40 rounded bg-slate-200" />
-              <div className="mt-2 h-3 w-28 rounded bg-slate-200" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <CardListSkeleton count={2} />;
 }

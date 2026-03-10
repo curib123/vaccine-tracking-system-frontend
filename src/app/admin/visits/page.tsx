@@ -20,6 +20,7 @@ import AuthGuard from '@/components/guards/AuthGuard';
 import AlertModal from '@/components/modal/AlertModal';
 import AttachRecordsModal from '@/components/modal/AttachRecordsModal';
 import UpsertVisitModal from '@/components/modal/UpsertVisitModal';
+import { CardListSkeleton } from '@/components/ui/Shimmer';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -364,17 +365,5 @@ function VisitsContent() {
 /* ================= SKELETON ================= */
 
 function Skeleton() {
-  return (
-    <div className="space-y-4 animate-pulse">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-2xl bg-white p-6"
-        >
-          <div className="h-4 w-40 bg-slate-200 rounded" />
-          <div className="mt-2 h-3 w-64 bg-slate-200 rounded" />
-        </div>
-      ))}
-    </div>
-  );
+  return <CardListSkeleton count={4} />;
 }

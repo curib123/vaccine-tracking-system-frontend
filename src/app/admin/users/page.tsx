@@ -10,6 +10,7 @@ import AuthGuard from '@/components/guards/AuthGuard';
 import AlertModal from '@/components/modal/AlertModal';
 import UpsertUserModal from '@/components/modal/UpsertUserModal';
 import UserPermissionModal from '@/components/modal/UserPermissionModal';
+import { TablePageSkeleton } from '@/components/ui/Shimmer';
 import useSessionGuard from '@/hooks/useSessionGuard';
 import api from '@/lib/api';
 
@@ -35,7 +36,7 @@ type Pagination = {
 
 /* ================= PAGE CONTENT ================= */
 function UsersPageContent() {
-  const { user: sessionUser, loading } = useSessionGuard({
+  const { user: sessionUser, loading: sessionLoading } = useSessionGuard({
     mode: 'protected',
     redirectTo: '/login',
   });
@@ -61,6 +62,7 @@ function UsersPageContent() {
 
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertUserId, setAlertUserId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   /* ================= LOAD USERS ================= */
   useEffect(() => {
@@ -69,20 +71,26 @@ function UsersPageContent() {
   }, [search, isActive, sortBy, sortOrder]);
 
   const fetchUsers = async (page: number) => {
-    const params: any = {
-      page,
-      limit: pagination.limit,
-      sortBy,
-      sortOrder,
-    };
+    try {
+      setLoading(true);
 
-    if (search) params.search = search;
-    if (isActive !== '') params.isActive = isActive;
+      const params: any = {
+        page,
+        limit: pagination.limit,
+        sortBy,
+        sortOrder,
+      };
 
-    const { data } = await api.get('/user/getAllUsers', { params });
+      if (search) params.search = search;
+      if (isActive !== '') params.isActive = isActive;
 
-    setUsers(data.data || []);
-    setPagination(data.pagination);
+      const { data } = await api.get('/user/getAllUsers', { params });
+
+      setUsers(data.data || []);
+      setPagination(data.pagination);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reload = () => fetchUsers(pagination.page);
@@ -112,12 +120,8 @@ function UsersPageContent() {
   };
 
   /* ================= LOADING ================= */
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center text-slate-500">
-        Loading users…
-      </div>
-    );
+  if (sessionLoading || loading) {
+    return <TablePageSkeleton columns={8} rows={6} />;
   }
 
   /* ================= RENDER ================= */
