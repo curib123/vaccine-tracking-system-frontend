@@ -8,6 +8,7 @@ import {
 import {
   Baby,
   CalendarDays,
+  CalendarRange,
   LayoutDashboard,
   LogOut,
   Shield,
@@ -93,6 +94,12 @@ const links = [
     href: '/admin/immunization',
     label: 'Immunization Records',
     icon: Syringe,
+    required: PermissionCode.MANAGE_IMMUNIZATION,
+  },
+  {
+    href: '/admin/due-immunizations',
+    label: 'Due Immunizations',
+    icon: CalendarRange,
     required: PermissionCode.MANAGE_IMMUNIZATION,
   },
   {

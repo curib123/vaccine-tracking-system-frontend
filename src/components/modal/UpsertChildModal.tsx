@@ -18,6 +18,12 @@ type Parent = {
   email: string;
 };
 
+type Vaccine = {
+  id: number;
+  name: string;
+  recommendedAge?: string;
+};
+
 type ChildForm = {
   parentId: number | '';
   firstName: string;
@@ -57,8 +63,11 @@ export default function UpsertChildModal({
 
   const [form, setForm] = useState<ChildForm>(initialForm);
   const [parents, setParents] = useState<Parent[]>([]);
+  const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [query, setQuery] = useState('');
   const [openList, setOpenList] = useState(false);
+  const [selectedVaccineIds, setSelectedVaccineIds] = useState<number[]>([]);
+  const [autoGenerateRecords, setAutoGenerateRecords] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -87,6 +96,23 @@ export default function UpsertChildModal({
           message: 'Failed to load parents',
         })
       );
+
+    api
+      .get('/vaccine/getAllVaccines', {
+        params: {
+          limit: 500,
+          sortBy: 'name',
+          sortOrder: 'asc',
+        },
+      })
+      .then(res => setVaccines(res.data.data || []))
+      .catch(() =>
+        setAlert({
+          open: true,
+          type: 'error',
+          message: 'Failed to load vaccines',
+        })
+      );
   }, [open]);
 
   /* ================= LOAD CHILD (EDIT MODE) ================= */
@@ -96,6 +122,8 @@ export default function UpsertChildModal({
     if (!isEdit) {
       setForm(initialForm);
       setQuery('');
+      setSelectedVaccineIds([]);
+      setAutoGenerateRecords(true);
       return;
     }
 
@@ -140,6 +168,14 @@ export default function UpsertChildModal({
       );
   }, [open, childId, isEdit]);
 
+  const toggleVaccine = (vaccineId: number) => {
+    setSelectedVaccineIds(ids =>
+      ids.includes(vaccineId)
+        ? ids.filter(id => id !== vaccineId)
+        : [...ids, vaccineId]
+    );
+  };
+
   /* ================= FILTER PARENTS ================= */
   const filteredParents = parents.filter(p =>
     `${p.firstName} ${p.middleName ?? ''} ${p.lastName} ${p.email}`
@@ -180,10 +216,27 @@ export default function UpsertChildModal({
     setSaving(true);
 
     try {
+      let createdChildId = childId ?? null;
+
       if (isEdit) {
         await api.put(`/child/update/${childId}`, syncedForm);
       } else {
-        await api.post('/child/create', syncedForm);
+        const res = await api.post('/child/create', syncedForm);
+        createdChildId =
+          res?.data?.data?.id ??
+          res?.data?.id ??
+          null;
+
+        if (
+          autoGenerateRecords &&
+          createdChildId &&
+          selectedVaccineIds.length > 0
+        ) {
+          await api.post('/records/generate/by-vaccines', {
+            childId: createdChildId,
+            vaccineIds: selectedVaccineIds,
+          });
+        }
       }
 
       setAlert({
@@ -191,7 +244,9 @@ export default function UpsertChildModal({
         type: 'success',
         message: isEdit
           ? 'Child updated successfully'
-          : 'Child created successfully',
+          : autoGenerateRecords && selectedVaccineIds.length > 0
+            ? 'Child created and vaccine records generated successfully'
+            : 'Child created successfully',
       });
 
       onSaved();
@@ -297,6 +352,90 @@ export default function UpsertChildModal({
 
             {/* BIRTH PLACE */}
             <input ref={birthPlaceRef} placeholder="Birth place *" className="px-4 py-2.5 rounded-xl border" />
+
+            {!isEdit && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Initial Immunization Schedule
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Generate the child&apos;s pending vaccine records immediately after registration.
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={autoGenerateRecords}
+                      onChange={e =>
+                        setAutoGenerateRecords(e.target.checked)
+                      }
+                    />
+                    Auto-generate
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedVaccineIds(vaccines.map(v => v.id))
+                    }
+                    className="rounded-lg border px-3 py-1.5 text-xs text-slate-700"
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVaccineIds([])}
+                    className="rounded-lg border px-3 py-1.5 text-xs text-slate-700"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                <div className="max-h-52 space-y-2 overflow-auto rounded-xl border bg-white p-3">
+                  {vaccines.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No vaccines available yet. Create vaccine templates first.
+                    </p>
+                  ) : (
+                    vaccines.map(vaccine => {
+                      const selected = selectedVaccineIds.includes(vaccine.id);
+
+                      return (
+                        <label
+                          key={vaccine.id}
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2 transition ${
+                            selected
+                              ? 'border-blue-200 bg-blue-50'
+                              : 'border-slate-200 bg-white'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => toggleVaccine(vaccine.id)}
+                          />
+
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">
+                              {vaccine.name}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {vaccine.recommendedAge || 'No recommended age'}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* FOOTER */}

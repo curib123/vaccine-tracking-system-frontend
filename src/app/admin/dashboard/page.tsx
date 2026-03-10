@@ -142,16 +142,6 @@ function DashboardPageContent() {
         </div>
       </section>
 
-      {/* CHART PLACEHOLDER */}
-      <section className="bg-white rounded-2xl shadow p-6">
-        <h2 className="text-lg font-semibold text-slate-800 mb-3">
-          Monthly Immunization Trend
-        </h2>
-
-        <div className="h-64 flex items-center justify-center text-slate-400 border border-dashed rounded-xl">
-          Chart will be displayed here
-        </div>
-      </section>
     </div>
   );
 }

@@ -176,7 +176,7 @@ function RecordsPageContent() {
 
   /* ---------- RENDER ---------- */
   if (loading) {
-    return <TablePageSkeleton columns={5} rows={6} showHeaderAction={false} />;
+    return <TablePageSkeleton columns={6} rows={6} showHeaderAction={false} />;
   }
 
   return (
@@ -234,6 +234,9 @@ function RecordsPageContent() {
                 Dose
               </th>
               <th className="px-6 py-3 text-left">
+                Due Date
+              </th>
+              <th className="px-6 py-3 text-left">
                 Visit
               </th>
               <th className="px-6 py-3 text-left">
@@ -272,6 +275,12 @@ function RecordsPageContent() {
                   </td>
 
                   <td className="px-6 py-4">
+                    {r.nextDueDate
+                      ? new Date(r.nextDueDate).toLocaleDateString()
+                      : '—'}
+                  </td>
+
+                  <td className="px-6 py-4">
                     {r.visitId ? (
                       <button
                         onClick={() =>
@@ -305,7 +314,7 @@ function RecordsPageContent() {
                   visitCache[r.visitId] && (
                     <tr className="bg-slate-50">
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         className="px-6 py-5 text-sm"
                       >
                         {/* VISIT INFO */}

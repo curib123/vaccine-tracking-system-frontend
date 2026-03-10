@@ -19,6 +19,7 @@ import api from '@/lib/api';
 type Props = {
   open: boolean;
   visitId?: number | null;
+  initialChild?: Child | null;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -40,6 +41,7 @@ type User = {
 export default function UpsertVisitModal({
   open,
   visitId,
+  initialChild = null,
   onClose,
   onSaved,
 }: Props) {
@@ -100,6 +102,12 @@ export default function UpsertVisitModal({
       }
     });
   }, [open, isEdit, visitId]);
+
+  useEffect(() => {
+    if (!open || isEdit) return;
+
+    setSelectedChildren(initialChild ? [initialChild] : []);
+  }, [open, isEdit, initialChild]);
 
   /* ================= SAVE ================= */
 
@@ -186,12 +194,14 @@ export default function UpsertVisitModal({
           <header className="flex items-center justify-between px-6 py-4">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
-                {isEdit ? 'Edit Visit' : 'Create Visits'}
+                {isEdit ? 'Edit Visit' : initialChild ? 'Create Visit' : 'Create Visits'}
               </h2>
               <p className="text-sm text-slate-500">
                 {isEdit
                   ? 'Update visit details'
-                  : 'One visit per selected child'}
+                  : initialChild
+                    ? 'Create an actual clinic visit for this child'
+                    : 'One visit per selected child'}
               </p>
             </div>
 
@@ -209,6 +219,7 @@ export default function UpsertVisitModal({
               <SearchableMultiSelectChildren
                 value={selectedChildren}
                 onChange={setSelectedChildren}
+                disabled={Boolean(initialChild)}
               />
             )}
 
@@ -286,9 +297,11 @@ export default function UpsertVisitModal({
 function SearchableMultiSelectChildren({
   value,
   onChange,
+  disabled = false,
 }: {
   value: Child[];
   onChange: (v: Child[]) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -335,8 +348,9 @@ function SearchableMultiSelectChildren({
 
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setOpen(o => !o)}
-        className="w-full rounded-xl bg-slate-50 px-4 py-3 text-left text-sm hover:bg-slate-100"
+        className="w-full rounded-xl bg-slate-50 px-4 py-3 text-left text-sm hover:bg-slate-100 disabled:cursor-not-allowed"
       >
         {value.length
           ? `${value.length} child selected`
