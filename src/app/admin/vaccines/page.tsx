@@ -1,17 +1,14 @@
-'use client';
+"use client";
 
-import {
-  Fragment,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { Fragment, useEffect, useMemo, useState } from "react";
 
-import AuthGuard from '@/components/guards/AuthGuard';
-import AlertModal from '@/components/modal/AlertModal';
-import UpsertVaccineModal from '@/components/modal/UpsertVaccineModal';
-import { TablePageSkeleton } from '@/components/ui/Shimmer';
-import api from '@/lib/api';
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
+
+import AuthGuard from "@/components/guards/AuthGuard";
+import AlertModal from "@/components/modal/AlertModal";
+import UpsertVaccineModal from "@/components/modal/UpsertVaccineModal";
+import { TablePageSkeleton } from "@/components/ui/Shimmer";
+import api from "@/lib/api";
 
 /* ================= TYPES ================= */
 type Schedule = {
@@ -51,18 +48,15 @@ function VaccinePageContent() {
     totalPages: 1,
   });
 
-  const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] =
-    useState<'asc' | 'desc'>('desc');
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedId, setSelectedId] =
-    useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const [alertOpen, setAlertOpen] = useState(false);
-  const [deleteId, setDeleteId] =
-    useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   /* ================= LOAD ================= */
@@ -84,10 +78,7 @@ function VaccinePageContent() {
 
       if (search) params.search = search;
 
-      const { data } = await api.get(
-        '/vaccine/getAllVaccines',
-        { params }
-      );
+      const { data } = await api.get("/vaccine/getAllVaccines", { params });
 
       setVaccines(data.data || []);
       setPagination(data.pagination);
@@ -108,10 +99,7 @@ function VaccinePageContent() {
   };
 
   /* ================= MEMO ================= */
-  const hasData = useMemo(
-    () => vaccines.length > 0,
-    [vaccines]
-  );
+  const hasData = useMemo(() => vaccines.length > 0, [vaccines]);
 
   if (loading) {
     return <TablePageSkeleton columns={6} rows={6} />;
@@ -146,26 +134,24 @@ function VaccinePageContent() {
       <section className="bg-white rounded-xl shadow px-6 py-4 flex flex-wrap gap-3">
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search vaccine name"
           className="px-4 py-2 rounded-lg border text-sm w-64"
         />
 
         <select
           value={`${sortBy}:${sortOrder}`}
-          onChange={e => {
-            const [sb, so] = e.target.value.split(':');
+          onChange={(e) => {
+            const [sb, so] = e.target.value.split(":");
             setSortBy(sb);
-            setSortOrder(so as 'asc' | 'desc');
+            setSortOrder(so as "asc" | "desc");
           }}
           className="px-4 py-2 rounded-lg border text-sm"
         >
           <option value="createdAt:desc">Newest</option>
           <option value="createdAt:asc">Oldest</option>
           <option value="name:asc">Name A–Z</option>
-          <option value="recommendedAge:asc">
-            Recommended Age
-          </option>
+          <option value="recommendedAge:asc">Recommended Age</option>
           <option value="totalDoses:asc">Total Doses</option>
         </select>
       </section>
@@ -176,7 +162,9 @@ function VaccinePageContent() {
           <thead className="bg-slate-50 text-slate-500">
             <tr>
               <th className="px-6 py-3 text-left font-medium">Vaccine</th>
-              <th className="px-6 py-3 text-left font-medium">Recommended Age</th>
+              <th className="px-6 py-3 text-left font-medium">
+                Recommended Age
+              </th>
               <th className="px-6 py-3 text-left font-medium">Doses</th>
               <th className="px-6 py-3 text-left font-medium">Booster</th>
               <th className="px-6 py-3 text-left font-medium">Created</th>
@@ -187,16 +175,13 @@ function VaccinePageContent() {
           <tbody>
             {!hasData && (
               <tr>
-                <td
-                  colSpan={6}
-                  className="py-14 text-center text-slate-400"
-                >
+                <td colSpan={6} className="py-14 text-center text-slate-400">
                   No vaccines found
                 </td>
               </tr>
             )}
 
-            {vaccines.map(v => (
+            {vaccines.map((v) => (
               <Fragment key={v.id}>
                 {/* MAIN ROW */}
                 <tr className="hover:bg-slate-50 transition">
@@ -209,7 +194,7 @@ function VaccinePageContent() {
                   </td>
 
                   <td className="px-6 py-4 text-slate-500">
-                    {v.totalDoses ?? '—'}
+                    {v.totalDoses ?? "—"}
                   </td>
 
                   <td className="px-6 py-4">
@@ -218,7 +203,7 @@ function VaccinePageContent() {
                         Yes
                         {v.boosterAfterMonths
                           ? ` (${v.boosterAfterMonths}m)`
-                          : ''}
+                          : ""}
                       </span>
                     ) : (
                       <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-500 text-xs">
@@ -231,39 +216,55 @@ function VaccinePageContent() {
                     {new Date(v.createdAt).toLocaleDateString()}
                   </td>
 
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() =>
-                        setExpandedId(
-                          expandedId === v.id ? null : v.id
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs"
-                    >
-                      {expandedId === v.id
-                        ? 'Hide Schedule'
-                        : 'View Schedule'}
-                    </button>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() =>
+                          setExpandedId(expandedId === v.id ? null : v.id)
+                        }
+                        className="rounded-lg border p-2 text-slate-600 transition hover:bg-slate-50"
+                        title={
+                          expandedId === v.id
+                            ? "Hide Schedule"
+                            : "View Schedule"
+                        }
+                        aria-label={
+                          expandedId === v.id
+                            ? "Hide Schedule"
+                            : "View Schedule"
+                        }
+                      >
+                        {expandedId === v.id ? (
+                          <ChevronUp size={16} />
+                        ) : (
+                          <ChevronDown size={16} />
+                        )}
+                      </button>
 
-                    <button
-                      onClick={() => {
-                        setSelectedId(v.id);
-                        setModalOpen(true);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow hover:shadow-md transition text-xs"
-                    >
-                      Edit
-                    </button>
+                      <button
+                        onClick={() => {
+                          setSelectedId(v.id);
+                          setModalOpen(true);
+                        }}
+                        className="rounded-lg border p-2 text-blue-600 transition hover:bg-blue-50"
+                        title="Edit Vaccine"
+                        aria-label="Edit Vaccine"
+                      >
+                        <Pencil size={16} />
+                      </button>
 
-                    <button
-                      onClick={() => {
-                        setDeleteId(v.id);
-                        setAlertOpen(true);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-white text-red-600 shadow hover:shadow-md transition text-xs"
-                    >
-                      Remove
-                    </button>
+                      <button
+                        onClick={() => {
+                          setDeleteId(v.id);
+                          setAlertOpen(true);
+                        }}
+                        className="rounded-lg border p-2 text-red-600 transition hover:bg-red-50"
+                        title="Remove Vaccine"
+                        aria-label="Remove Vaccine"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
@@ -281,7 +282,7 @@ function VaccinePageContent() {
                         </p>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {v.schedules.map(s => (
+                          {v.schedules.map((s) => (
                             <div
                               key={`${v.id}-${s.doseNumber}`}
                               className="rounded-lg border bg-white p-3 text-sm"
@@ -294,7 +295,7 @@ function VaccinePageContent() {
                                 Age: {s.recommendedAgeInMonths} month(s)
                                 {s.intervalDays
                                   ? ` • Interval: ${s.intervalDays} days`
-                                  : ''}
+                                  : ""}
                               </div>
                             </div>
                           ))}
@@ -311,16 +312,14 @@ function VaccinePageContent() {
         {/* PAGINATION */}
         <div className="flex items-center justify-between px-6 py-4 text-sm text-slate-500">
           <span>
-            Page <strong>{pagination.page}</strong> of{' '}
+            Page <strong>{pagination.page}</strong> of{" "}
             <strong>{pagination.totalPages}</strong>
           </span>
 
           <div className="flex gap-2">
             <button
               disabled={pagination.page === 1}
-              onClick={() =>
-                fetchVaccines(pagination.page - 1)
-              }
+              onClick={() => fetchVaccines(pagination.page - 1)}
               className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40"
             >
               Previous
@@ -328,9 +327,7 @@ function VaccinePageContent() {
 
             <button
               disabled={pagination.page === pagination.totalPages}
-              onClick={() =>
-                fetchVaccines(pagination.page + 1)
-              }
+              onClick={() => fetchVaccines(pagination.page + 1)}
               className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40"
             >
               Next

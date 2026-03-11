@@ -1,15 +1,13 @@
-'use client';
+"use client";
 
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useEffect, useState } from "react";
 
-import AlertModal from '@/components/modal/AlertModal';
-import UpsertAnnouncementModal
-  from '@/components/modal/UpsertAnnouncementModal';
-import { TablePageSkeleton } from '@/components/ui/Shimmer';
-import api from '@/lib/api';
+import { Pencil, Trash2 } from "lucide-react";
+
+import AlertModal from "@/components/modal/AlertModal";
+import UpsertAnnouncementModal from "@/components/modal/UpsertAnnouncementModal";
+import { TablePageSkeleton } from "@/components/ui/Shimmer";
+import api from "@/lib/api";
 
 /* ================= TYPES ================= */
 type Announcement = {
@@ -51,24 +49,23 @@ export default function AnnouncementPage() {
   /* ALERT */
   const [alert, setAlert] = useState({
     open: false,
-    type: 'success' as 'success' | 'error' | 'warning',
-    message: '',
+    type: "success" as "success" | "error" | "warning",
+    message: "",
   });
 
   const fmtDate = (date: string) =>
-  new Date(date).toLocaleDateString('en-PH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-
+    new Date(date).toLocaleDateString("en-PH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
 
   /* ================= LOAD ================= */
   const loadAnnouncements = async (page = 1) => {
     try {
       setLoading(true);
 
-      const res = await api.get('/announcements/getAll', {
+      const res = await api.get("/announcements/getAll", {
         params: { page, limit: PAGE_SIZE },
       });
 
@@ -77,8 +74,8 @@ export default function AnnouncementPage() {
     } catch {
       setAlert({
         open: true,
-        type: 'error',
-        message: 'Failed to load announcements',
+        type: "error",
+        message: "Failed to load announcements",
       });
     } finally {
       setLoading(false);
@@ -96,16 +93,16 @@ export default function AnnouncementPage() {
 
       setAlert({
         open: true,
-        type: 'success',
-        message: 'Announcement removed successfully',
+        type: "success",
+        message: "Announcement removed successfully",
       });
 
       loadAnnouncements(pagination.page);
     } catch {
       setAlert({
         open: true,
-        type: 'error',
-        message: 'Failed to remove announcement',
+        type: "error",
+        message: "Failed to remove announcement",
       });
     }
   };
@@ -124,9 +121,7 @@ export default function AnnouncementPage() {
             <h1 className="text-2xl font-semibold text-gray-800">
               Announcements
             </h1>
-            <p className="text-sm text-gray-500">
-              Manage system announcements
-            </p>
+            <p className="text-sm text-gray-500">Manage system announcements</p>
           </div>
 
           <button
@@ -141,138 +136,125 @@ export default function AnnouncementPage() {
         </div>
 
         {/* TABLE */}
-       <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-  <table className="w-full text-sm">
-    <thead className="bg-gray-50 text-gray-600">
-      <tr>
-        <th className="px-5 py-3 text-left font-medium">
-          Title
-        </th>
-        <th className="px-5 py-3 text-left font-medium">
-          Message
-        </th>
-        <th className="px-5 py-3 text-center font-medium">
-          Status
-        </th>
-        <th className="px-5 py-3 text-center font-medium">
-          Created At
-        </th>
-        <th className="px-5 py-3 text-right font-medium">
-          Actions
-        </th>
-      </tr>
-    </thead>
+        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-600">
+              <tr>
+                <th className="px-5 py-3 text-left font-medium">Title</th>
+                <th className="px-5 py-3 text-left font-medium">Message</th>
+                <th className="px-5 py-3 text-center font-medium">Status</th>
+                <th className="px-5 py-3 text-center font-medium">
+                  Created At
+                </th>
+                <th className="px-5 py-3 text-right font-medium">Actions</th>
+              </tr>
+            </thead>
 
-    <tbody className="divide-y">
-      {announcements.length === 0 ? (
-        <tr>
-          <td
-            colSpan={5}
-            className="px-5 py-8 text-center text-gray-500"
-          >
-            No announcements found
-          </td>
-        </tr>
-      ) : (
-        announcements.map(a => (
-          <tr key={a.id} className="hover:bg-gray-50">
-            {/* TITLE */}
-            <td className="px-5 py-3 font-medium text-gray-800">
-              {a.title}
-            </td>
+            <tbody className="divide-y">
+              {announcements.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-gray-500"
+                  >
+                    No announcements found
+                  </td>
+                </tr>
+              ) : (
+                announcements.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    {/* TITLE */}
+                    <td className="px-5 py-3 font-medium text-gray-800">
+                      {a.title}
+                    </td>
 
-            {/* MESSAGE */}
-            <td className="px-5 py-3 text-gray-600 max-w-md">
-              <p className="line-clamp-2">
-                {a.message}
-              </p>
-            </td>
+                    {/* MESSAGE */}
+                    <td className="px-5 py-3 text-gray-600 max-w-md">
+                      <p className="line-clamp-2">{a.message}</p>
+                    </td>
 
-            {/* STATUS */}
-            <td className="px-5 py-3 text-center">
-              <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                  a.isActive
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                {a.isActive ? 'Active' : 'Inactive'}
-              </span>
-            </td>
+                    {/* STATUS */}
+                    <td className="px-5 py-3 text-center">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                          a.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {a.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
 
-            {/* CREATED AT */}
-            <td className="px-5 py-3 text-center text-gray-500">
-              {fmtDate(a.createdAt)}
-            </td>
+                    {/* CREATED AT */}
+                    <td className="px-5 py-3 text-center text-gray-500">
+                      {fmtDate(a.createdAt)}
+                    </td>
 
-            {/* ACTIONS */}
-            <td className="px-5 py-3 text-right space-x-2">
+                    {/* ACTIONS */}
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedId(a.id);
+                            setOpenUpsert(true);
+                          }}
+                          className="rounded-lg border p-2 text-blue-600 transition hover:bg-blue-50"
+                          title="Edit Announcement"
+                          aria-label="Edit Announcement"
+                        >
+                          <Pencil size={16} />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setDeleteId(a.id);
+                            setAlert({
+                              open: true,
+                              type: "warning",
+                              message:
+                                "Are you sure you want to remove this announcement?",
+                            });
+                          }}
+                          className="rounded-lg border p-2 text-red-600 transition hover:bg-red-50"
+                          title="Remove Announcement"
+                          aria-label="Remove Announcement"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          {/* PAGINATION */}
+          <div className="flex items-center justify-between px-5 py-4 border-t text-sm">
+            <span className="text-gray-500">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+
+            <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setSelectedId(a.id);
-                  setOpenUpsert(true);
-                }}
-                className="rounded-lg border px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50"
+                disabled={pagination.page <= 1}
+                onClick={() => loadAnnouncements(pagination.page - 1)}
+                className="rounded-lg border px-3 py-1.5 disabled:opacity-40"
               >
-                Edit
+                Previous
               </button>
 
               <button
-                onClick={() => {
-                  setDeleteId(a.id);
-                  setAlert({
-                    open: true,
-                    type: 'warning',
-                    message:
-                      'Are you sure you want to remove this announcement?',
-                  });
-                }}
-                className="rounded-lg border px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                disabled={pagination.page >= pagination.totalPages}
+                onClick={() => loadAnnouncements(pagination.page + 1)}
+                className="rounded-lg border px-3 py-1.5 disabled:opacity-40"
               >
-                Remove
+                Next
               </button>
-            </td>
-          </tr>
-        ))
-      )}
-    </tbody>
-  </table>
-
-  
-
-  {/* PAGINATION */}
-  <div className="flex items-center justify-between px-5 py-4 border-t text-sm">
-    <span className="text-gray-500">
-      Page {pagination.page} of {pagination.totalPages}
-    </span>
-
-    <div className="flex gap-2">
-      <button
-        disabled={pagination.page <= 1}
-        onClick={() =>
-          loadAnnouncements(pagination.page - 1)
-        }
-        className="rounded-lg border px-3 py-1.5 disabled:opacity-40"
-      >
-        Previous
-      </button>
-
-      <button
-        disabled={
-          pagination.page >= pagination.totalPages
-        }
-        onClick={() =>
-          loadAnnouncements(pagination.page + 1)
-        }
-        className="rounded-lg border px-3 py-1.5 disabled:opacity-40"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-</div>
-
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* UPSERT MODAL */}
@@ -283,14 +265,12 @@ export default function AnnouncementPage() {
         onSaved={() => loadAnnouncements(pagination.page)}
       />
 
-      
-
       {/* ALERT / CONFIRM MODAL */}
       <AlertModal
         open={alert.open}
         type={alert.type}
         message={alert.message}
-        actionLabel={deleteId ? 'Yes, Remove' : undefined}
+        actionLabel={deleteId ? "Yes, Remove" : undefined}
         onAction={
           deleteId
             ? async () => {
@@ -300,7 +280,7 @@ export default function AnnouncementPage() {
             : undefined
         }
         onClose={() => {
-          setAlert(prev => ({ ...prev, open: false }));
+          setAlert((prev) => ({ ...prev, open: false }));
           setDeleteId(null);
         }}
       />

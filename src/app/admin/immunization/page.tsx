@@ -1,15 +1,12 @@
-'use client';
+"use client";
 
-import {
-  Fragment,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { Fragment, useEffect, useMemo, useState } from "react";
 
-import AuthGuard from '@/components/guards/AuthGuard';
-import { TablePageSkeleton } from '@/components/ui/Shimmer';
-import api from '@/lib/api';
+import { ChevronDown, ChevronUp } from "lucide-react";
+
+import AuthGuard from "@/components/guards/AuthGuard";
+import { TablePageSkeleton } from "@/components/ui/Shimmer";
+import api from "@/lib/api";
 
 /* ================= TYPES ================= */
 
@@ -68,26 +65,19 @@ type Pagination = {
 
 function RecordsPageContent() {
   /* ---------- STATE ---------- */
-  const [records, setRecords] = useState<
-    ImmunizationRecord[]
-  >([]);
-  const [statuses, setStatuses] = useState<
-    StatusOption[]
-  >([]);
-  const [pagination, setPagination] =
-    useState<Pagination>({
-      page: 1,
-      limit: 10,
-      totalPages: 1,
-    });
+  const [records, setRecords] = useState<ImmunizationRecord[]>([]);
+  const [statuses, setStatuses] = useState<StatusOption[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  });
 
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] =
-    useState('');
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const [expandedVisitId, setExpandedVisitId] =
-    useState<number | null>(null);
+  const [expandedVisitId, setExpandedVisitId] = useState<number | null>(null);
 
   const [visitCache, setVisitCache] = useState<{
     [key: number]: Visit;
@@ -104,7 +94,7 @@ function RecordsPageContent() {
   }, [search, statusFilter]);
 
   const fetchStatuses = async () => {
-    const res = await api.get('/records/statuses');
+    const res = await api.get("/records/statuses");
     setStatuses(res.data.data || []);
   };
 
@@ -120,7 +110,7 @@ function RecordsPageContent() {
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
 
-      const { data } = await api.get('/records', {
+      const { data } = await api.get("/records", {
         params,
       });
 
@@ -135,11 +125,9 @@ function RecordsPageContent() {
   const loadVisit = async (visitId: number) => {
     if (visitCache[visitId]) return;
 
-    const res = await api.get(
-      `/visits/getVisitById/${visitId}`
-    );
+    const res = await api.get(`/visits/getVisitById/${visitId}`);
 
-    setVisitCache(prev => ({
+    setVisitCache((prev) => ({
       ...prev,
       [visitId]: res.data.data,
     }));
@@ -155,23 +143,16 @@ function RecordsPageContent() {
     setExpandedVisitId(visitId);
   };
 
-  const hasData = useMemo(
-    () => records.length > 0,
-    [records]
-  );
+  const hasData = useMemo(() => records.length > 0, [records]);
 
   /* ---------- STATUS COLOR (DATA-DRIVEN) ---------- */
   const statusColor = (value: string) => {
     const v = value.toLowerCase();
-    if (v.includes('complete'))
-      return 'bg-green-100 text-green-700';
-    if (v.includes('pending'))
-      return 'bg-blue-100 text-blue-700';
-    if (v.includes('skip'))
-      return 'bg-slate-100 text-slate-600';
-    if (v.includes('cancel'))
-      return 'bg-red-100 text-red-700';
-    return 'bg-slate-100 text-slate-600';
+    if (v.includes("complete")) return "bg-green-100 text-green-700";
+    if (v.includes("pending")) return "bg-blue-100 text-blue-700";
+    if (v.includes("skip")) return "bg-slate-100 text-slate-600";
+    if (v.includes("cancel")) return "bg-red-100 text-red-700";
+    return "bg-slate-100 text-slate-600";
   };
 
   /* ---------- RENDER ---------- */
@@ -195,24 +176,19 @@ function RecordsPageContent() {
       <section className="bg-white rounded-xl shadow px-6 py-4 flex gap-3">
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search child or vaccine"
           className="px-4 py-2 rounded-lg border text-sm w-64"
         />
 
         <select
           value={statusFilter}
-          onChange={e =>
-            setStatusFilter(e.target.value)
-          }
+          onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-2 rounded-lg border text-sm"
         >
           <option value="">All Status</option>
-          {statuses.map(s => (
-            <option
-              key={s.value}
-              value={s.value}
-            >
+          {statuses.map((s) => (
+            <option key={s.value} value={s.value}>
               {s.label}
             </option>
           ))}
@@ -224,83 +200,73 @@ function RecordsPageContent() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
-              <th className="px-6 py-3 text-left">
-                Child
-              </th>
-              <th className="px-6 py-3 text-left">
-                Vaccine
-              </th>
-              <th className="px-6 py-3 text-left">
-                Dose
-              </th>
-              <th className="px-6 py-3 text-left">
-                Due Date
-              </th>
-              <th className="px-6 py-3 text-left">
-                Visit
-              </th>
-              <th className="px-6 py-3 text-left">
-                Status
-              </th>
+              <th className="px-6 py-3 text-left">Child</th>
+              <th className="px-6 py-3 text-left">Vaccine</th>
+              <th className="px-6 py-3 text-left">Dose</th>
+              <th className="px-6 py-3 text-left">Due Date</th>
+              <th className="px-6 py-3 text-left">Visit</th>
+              <th className="px-6 py-3 text-left">Status</th>
             </tr>
           </thead>
 
           <tbody>
             {!hasData && (
               <tr>
-                <td
-                  colSpan={5}
-                  className="py-14 text-center text-slate-400"
-                >
+                <td colSpan={5} className="py-14 text-center text-slate-400">
                   No records found
                 </td>
               </tr>
             )}
 
-            {records.map(r => (
+            {records.map((r) => (
               <Fragment key={r.id}>
                 {/* MAIN ROW */}
                 <tr className="hover:bg-slate-50">
                   <td className="px-6 py-4 font-medium">
-                    {r.child.firstName}{' '}
-                    {r.child.lastName}
+                    {r.child.firstName} {r.child.lastName}
                   </td>
 
-                  <td className="px-6 py-4">
-                    {r.vaccine.name}
-                  </td>
+                  <td className="px-6 py-4">{r.vaccine.name}</td>
 
-                  <td className="px-6 py-4">
-                    {r.dose}
-                  </td>
+                  <td className="px-6 py-4">{r.dose}</td>
 
                   <td className="px-6 py-4">
                     {r.nextDueDate
                       ? new Date(r.nextDueDate).toLocaleDateString()
-                      : '—'}
+                      : "—"}
                   </td>
 
                   <td className="px-6 py-4">
                     {r.visitId ? (
                       <button
-                        onClick={() =>
-                          toggleVisit(r.visitId!)
+                        onClick={() => toggleVisit(r.visitId!)}
+                        className="rounded-lg border p-2 text-blue-600 transition hover:bg-blue-50"
+                        title={
+                          expandedVisitId === r.visitId
+                            ? "Hide Visit"
+                            : "View Visit"
                         }
-                        className="text-xs text-blue-600 hover:underline"
+                        aria-label={
+                          expandedVisitId === r.visitId
+                            ? "Hide Visit"
+                            : "View Visit"
+                        }
                       >
-                        {expandedVisitId === r.visitId
-                          ? 'Hide Visit'
-                          : 'View Visit'}
+                        {expandedVisitId === r.visitId ? (
+                          <ChevronUp size={16} />
+                        ) : (
+                          <ChevronDown size={16} />
+                        )}
                       </button>
                     ) : (
-                      '—'
+                      "—"
                     )}
                   </td>
 
                   <td className="px-6 py-4">
                     <span
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium ${statusColor(
-                        r.status
+                        r.status,
                       )}`}
                     >
                       {r.status}
@@ -313,44 +279,29 @@ function RecordsPageContent() {
                   expandedVisitId === r.visitId &&
                   visitCache[r.visitId] && (
                     <tr className="bg-slate-50">
-                      <td
-                        colSpan={6}
-                        className="px-6 py-5 text-sm"
-                      >
+                      <td colSpan={6} className="px-6 py-5 text-sm">
                         {/* VISIT INFO */}
                         <div className="grid grid-cols-3 gap-4 mb-4">
                           <div>
-                            <p className="text-xs text-slate-500">
-                              Visit Date
-                            </p>
+                            <p className="text-xs text-slate-500">Visit Date</p>
                             <p className="font-medium">
                               {new Date(
-                                visitCache[
-                                  r.visitId
-                                ].visitDate
+                                visitCache[r.visitId].visitDate,
                               ).toLocaleDateString()}
                             </p>
                           </div>
 
                           <div>
-                            <p className="text-xs text-slate-500">
-                              Location
-                            </p>
+                            <p className="text-xs text-slate-500">Location</p>
                             <p className="font-medium">
-                              {visitCache[
-                                r.visitId
-                              ].location || '—'}
+                              {visitCache[r.visitId].location || "—"}
                             </p>
                           </div>
 
                           <div>
-                            <p className="text-xs text-slate-500">
-                              Nurse
-                            </p>
+                            <p className="text-xs text-slate-500">Nurse</p>
                             <p className="font-medium">
-                              {visitCache[
-                                r.visitId
-                              ].nurseName || '—'}
+                              {visitCache[r.visitId].nurseName || "—"}
                             </p>
                           </div>
                         </div>
@@ -361,61 +312,52 @@ function RecordsPageContent() {
                         </p>
 
                         <div className="space-y-2">
-                          {visitCache[
-                            r.visitId
-                          ].records.map(rec => (
+                          {visitCache[r.visitId].records.map((rec) => (
                             <div
                               key={rec.id}
                               className="rounded-lg bg-white px-4 py-3 text-xs shadow-sm"
                             >
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <span className="text-slate-500">
-                                    Dose:
-                                  </span>{' '}
+                                  <span className="text-slate-500">Dose:</span>{" "}
                                   {rec.dose}
                                 </div>
 
                                 <div>
                                   <span className="text-slate-500">
                                     Date Given:
-                                  </span>{' '}
+                                  </span>{" "}
                                   {rec.dateGiven
                                     ? new Date(
-                                        rec.dateGiven
+                                        rec.dateGiven,
                                       ).toLocaleDateString()
-                                    : '—'}
+                                    : "—"}
                                 </div>
 
                                 <div>
                                   <span className="text-slate-500">
                                     Administered By:
-                                  </span>{' '}
-                                  {rec.administeredBy ||
-                                    '—'}
+                                  </span>{" "}
+                                  {rec.administeredBy || "—"}
                                 </div>
 
                                 <div>
-                                  <span className="text-slate-500">
-                                    Batch:
-                                  </span>{' '}
-                                  {rec.batchNumber ||
-                                    '—'}
+                                  <span className="text-slate-500">Batch:</span>{" "}
+                                  {rec.batchNumber || "—"}
                                 </div>
 
                                 <div>
                                   <span className="text-slate-500">
                                     Manufacturer:
-                                  </span>{' '}
-                                  {rec.manufacturer ||
-                                    '—'}
+                                  </span>{" "}
+                                  {rec.manufacturer || "—"}
                                 </div>
 
                                 {rec.remarks && (
                                   <div className="col-span-2">
                                     <span className="text-slate-500">
                                       Remarks:
-                                    </span>{' '}
+                                    </span>{" "}
                                     {rec.remarks}
                                   </div>
                                 )}

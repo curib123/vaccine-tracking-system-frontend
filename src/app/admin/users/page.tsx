@@ -1,18 +1,16 @@
-'use client';
+"use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useEffect, useMemo, useState } from "react";
 
-import AuthGuard from '@/components/guards/AuthGuard';
-import AlertModal from '@/components/modal/AlertModal';
-import UpsertUserModal from '@/components/modal/UpsertUserModal';
-import UserPermissionModal from '@/components/modal/UserPermissionModal';
-import { TablePageSkeleton } from '@/components/ui/Shimmer';
-import useSessionGuard from '@/hooks/useSessionGuard';
-import api from '@/lib/api';
+import { Pencil, Shield, Trash2 } from "lucide-react";
+
+import AuthGuard from "@/components/guards/AuthGuard";
+import AlertModal from "@/components/modal/AlertModal";
+import UpsertUserModal from "@/components/modal/UpsertUserModal";
+import UserPermissionModal from "@/components/modal/UserPermissionModal";
+import { TablePageSkeleton } from "@/components/ui/Shimmer";
+import useSessionGuard from "@/hooks/useSessionGuard";
+import api from "@/lib/api";
 
 /* ================= TYPES ================= */
 type User = {
@@ -37,8 +35,8 @@ type Pagination = {
 /* ================= PAGE CONTENT ================= */
 function UsersPageContent() {
   const { user: sessionUser, loading: sessionLoading } = useSessionGuard({
-    mode: 'protected',
-    redirectTo: '/login',
+    mode: "protected",
+    redirectTo: "/login",
   });
 
   const [users, setUsers] = useState<User[]>([]);
@@ -49,10 +47,10 @@ function UsersPageContent() {
   });
 
   /* 🆕 SEARCH / FILTER / SORT */
-  const [search, setSearch] = useState('');
-  const [isActive, setIsActive] = useState('');
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [search, setSearch] = useState("");
+  const [isActive, setIsActive] = useState("");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -82,9 +80,9 @@ function UsersPageContent() {
       };
 
       if (search) params.search = search;
-      if (isActive !== '') params.isActive = isActive;
+      if (isActive !== "") params.isActive = isActive;
 
-      const { data } = await api.get('/user/getAllUsers', { params });
+      const { data } = await api.get("/user/getAllUsers", { params });
 
       setUsers(data.data || []);
       setPagination(data.pagination);
@@ -97,13 +95,13 @@ function UsersPageContent() {
 
   /* ================= MEMO ================= */
   const currentUser = useMemo(
-    () => users.find(u => u.id === sessionUser?.id),
-    [users, sessionUser]
+    () => users.find((u) => u.id === sessionUser?.id),
+    [users, sessionUser],
   );
 
   const otherUsers = useMemo(
-    () => users.filter(u => u.id !== sessionUser?.id),
-    [users, sessionUser]
+    () => users.filter((u) => u.id !== sessionUser?.id),
+    [users, sessionUser],
   );
 
   /* ================= ACTIONS ================= */
@@ -127,29 +125,24 @@ function UsersPageContent() {
   /* ================= RENDER ================= */
   return (
     <div className="bg-slate-50 px-6 py-8 space-y-10">
-
       {/* HEADER */}
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Users
-        </h1>
-        <p className="text-sm text-slate-500">
-          Manage system users
-        </p>
+        <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
+        <p className="text-sm text-slate-500">Manage system users</p>
       </header>
 
       {/* 🆕 FILTER BAR */}
       <section className="bg-white rounded-xl shadow px-6 py-4 flex flex-wrap gap-3">
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search name or email"
           className="px-4 py-2 border rounded-lg text-sm w-64"
         />
 
         <select
           value={isActive}
-          onChange={e => setIsActive(e.target.value)}
+          onChange={(e) => setIsActive(e.target.value)}
           className="px-4 py-2 border rounded-lg text-sm"
         >
           <option value="">All Status</option>
@@ -159,10 +152,10 @@ function UsersPageContent() {
 
         <select
           value={`${sortBy}:${sortOrder}`}
-          onChange={e => {
-            const [sb, so] = e.target.value.split(':');
+          onChange={(e) => {
+            const [sb, so] = e.target.value.split(":");
             setSortBy(sb);
-            setSortOrder(so as 'asc' | 'desc');
+            setSortOrder(so as "asc" | "desc");
           }}
           className="px-4 py-2 border rounded-lg text-sm"
         >
@@ -188,9 +181,7 @@ function UsersPageContent() {
                 {currentUser.firstName} {currentUser.lastName}
               </h3>
 
-              <p className="text-sm text-slate-500">
-                {currentUser.email}
-              </p>
+              <p className="text-sm text-slate-500">{currentUser.email}</p>
 
               <div className="flex gap-2 pt-2">
                 <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
@@ -207,7 +198,6 @@ function UsersPageContent() {
 
       {/* USERS TABLE */}
       <section className="bg-white rounded-xl shadow-md">
-
         <div className="flex justify-between items-center px-6 py-5">
           <h2 className="text-sm font-semibold uppercase text-slate-700">
             All Users
@@ -246,15 +236,17 @@ function UsersPageContent() {
               </tr>
             )}
 
-            {otherUsers.map(u => (
+            {otherUsers.map((u) => (
               <tr key={u.id} className="hover:bg-slate-50 transition">
                 <td className="px-6 py-4 font-medium text-slate-800">
                   {u.firstName} {u.middleName} {u.lastName}
                 </td>
                 <td className="px-6 py-4 text-slate-500">{u.email}</td>
-                <td className="px-6 py-4 text-slate-500">{u.contactNo || '—'}</td>
+                <td className="px-6 py-4 text-slate-500">
+                  {u.contactNo || "—"}
+                </td>
                 <td className="px-6 py-4 text-slate-500 max-w-[240px] truncate">
-                  {u.address || '—'}
+                  {u.address || "—"}
                 </td>
                 <td className="px-6 py-4 text-center">
                   <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
@@ -266,44 +258,52 @@ function UsersPageContent() {
                     onClick={() => toggleStatus(u.id)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       u.isActive
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-200 text-slate-600'
+                        ? "bg-emerald-500 text-white"
+                        : "bg-slate-200 text-slate-600"
                     }`}
                   >
-                    {u.isActive ? 'Active' : 'Inactive'}
+                    {u.isActive ? "Active" : "Inactive"}
                   </button>
                 </td>
                 <td className="px-6 py-4 text-slate-500">
                   {new Date(u.createdAt).toLocaleDateString()}
                 </td>
-                <td className="px-6 py-4 text-right space-x-2">
-                  <button
-                    onClick={() => {
-                      setPermissionUserId(u.id);
-                      setPermissionOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow hover:text-blue-600 transition text-xs"
-                  >
-                    Permissions
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedId(u.id);
-                      setModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow transition text-xs"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAlertUserId(u.id);
-                      setAlertOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-white text-red-600 shadow transition text-xs"
-                  >
-                    Remove
-                  </button>
+                <td className="px-6 py-4">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        setPermissionUserId(u.id);
+                        setPermissionOpen(true);
+                      }}
+                      className="rounded-lg border p-2 text-slate-700 transition hover:bg-slate-50 hover:text-blue-600"
+                      title="Manage Permissions"
+                      aria-label="Manage Permissions"
+                    >
+                      <Shield size={16} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedId(u.id);
+                        setModalOpen(true);
+                      }}
+                      className="rounded-lg border p-2 text-blue-600 transition hover:bg-blue-50"
+                      title="Edit User"
+                      aria-label="Edit User"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAlertUserId(u.id);
+                        setAlertOpen(true);
+                      }}
+                      className="rounded-lg border p-2 text-red-600 transition hover:bg-red-50"
+                      title="Remove User"
+                      aria-label="Remove User"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -313,7 +313,7 @@ function UsersPageContent() {
         {/* PAGINATION */}
         <div className="flex items-center justify-between px-6 py-4 text-sm text-slate-500">
           <span>
-            Page <strong>{pagination.page}</strong> of{' '}
+            Page <strong>{pagination.page}</strong> of{" "}
             <strong>{pagination.totalPages}</strong>
           </span>
 

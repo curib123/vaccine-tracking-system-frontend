@@ -1,9 +1,6 @@
-'use client';
+"use client";
 
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useEffect, useState } from "react";
 
 import {
   CalendarDays,
@@ -14,14 +11,14 @@ import {
   Pencil,
   Plus,
   Stethoscope,
-} from 'lucide-react';
+} from "lucide-react";
 
-import AuthGuard from '@/components/guards/AuthGuard';
-import AlertModal from '@/components/modal/AlertModal';
-import AttachRecordsModal from '@/components/modal/AttachRecordsModal';
-import UpsertVisitModal from '@/components/modal/UpsertVisitModal';
-import { CardListSkeleton } from '@/components/ui/Shimmer';
-import api from '@/lib/api';
+import AuthGuard from "@/components/guards/AuthGuard";
+import AlertModal from "@/components/modal/AlertModal";
+import AttachRecordsModal from "@/components/modal/AttachRecordsModal";
+import UpsertVisitModal from "@/components/modal/UpsertVisitModal";
+import { CardListSkeleton } from "@/components/ui/Shimmer";
+import api from "@/lib/api";
 
 /* ================= TYPES ================= */
 
@@ -79,30 +76,25 @@ function VisitsContent() {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState('');
-  const [sortOrder, setSortOrder] =
-    useState<'asc' | 'desc'>('desc');
+  const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const [pagination, setPagination] =
-    useState<Pagination>({
-      page: 1,
-      limit: PAGE_SIZE,
-      total: 0,
-      totalPages: 1,
-    });
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: PAGE_SIZE,
+    total: 0,
+    totalPages: 1,
+  });
 
   /* MODALS */
   const [openUpsert, setOpenUpsert] = useState(false);
   const [openAttach, setOpenAttach] = useState(false);
 
-  const [selectedVisitId, setSelectedVisitId] =
-    useState<number | null>(null);
-  const [selectedChildId, setSelectedChildId] =
-    useState<number | null>(null);
+  const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
+  const [selectedChildId, setSelectedChildId] = useState<number | null>(null);
 
   /* VIEW ATTACHED RECORDS */
-  const [expandedVisitId, setExpandedVisitId] =
-    useState<number | null>(null);
+  const [expandedVisitId, setExpandedVisitId] = useState<number | null>(null);
 
   const [visitCache, setVisitCache] = useState<{
     [key: number]: VisitDetails;
@@ -111,9 +103,9 @@ function VisitsContent() {
   /* ALERT */
   const [alert, setAlert] = useState({
     open: false,
-    type: 'success' as 'success' | 'error' | 'warning',
-    message: '',
-    actionLabel: '',
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+    actionLabel: "",
     onAction: undefined as (() => void) | undefined,
   });
 
@@ -123,18 +115,15 @@ function VisitsContent() {
     try {
       setLoading(true);
 
-      const res = await api.get(
-        '/visits/getAllVisits',
-        {
-          params: {
-            page,
-            limit: PAGE_SIZE,
-            search,
-            sortBy: 'visitDate',
-            sortOrder,
-          },
-        }
-      );
+      const res = await api.get("/visits/getAllVisits", {
+        params: {
+          page,
+          limit: PAGE_SIZE,
+          search,
+          sortBy: "visitDate",
+          sortOrder,
+        },
+      });
 
       setVisits(res.data.data || []);
       setPagination(res.data.pagination);
@@ -157,11 +146,9 @@ function VisitsContent() {
     }
 
     if (!visitCache[visitId]) {
-      const res = await api.get(
-        `/visits/getVisitById/${visitId}`
-      );
+      const res = await api.get(`/visits/getVisitById/${visitId}`);
 
-      setVisitCache(prev => ({
+      setVisitCache((prev) => ({
         ...prev,
         [visitId]: res.data.data,
       }));
@@ -176,21 +163,15 @@ function VisitsContent() {
     <>
       <AlertModal
         {...alert}
-        onClose={() =>
-          setAlert(a => ({ ...a, open: false }))
-        }
+        onClose={() => setAlert((a) => ({ ...a, open: false }))}
       />
 
       <div className="mx-auto px-4 py-6">
         {/* HEADER */}
         <header className="mb-6 flex justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">
-              Immunization Visits
-            </h1>
-            <p className="text-sm text-slate-500">
-              Visit history per child
-            </p>
+            <h1 className="text-2xl font-semibold">Immunization Visits</h1>
+            <p className="text-sm text-slate-500">Visit history per child</p>
           </div>
 
           <button
@@ -211,7 +192,7 @@ function VisitsContent() {
           {loading ? (
             <Skeleton />
           ) : (
-            visits.map(visit => (
+            visits.map((visit) => (
               <div
                 key={visit.id}
                 className="rounded-2xl bg-white p-5 shadow-sm"
@@ -220,16 +201,13 @@ function VisitsContent() {
                 <div className="flex justify-between">
                   <div>
                     <h3 className="font-semibold">
-                      {visit.child.firstName}{' '}
-                      {visit.child.lastName}
+                      {visit.child.firstName} {visit.child.lastName}
                     </h3>
 
                     <div className="mt-2 flex gap-4 text-sm text-slate-600">
                       <span className="flex items-center gap-1">
                         <CalendarDays className="h-4 w-4" />
-                        {new Date(
-                          visit.visitDate
-                        ).toLocaleDateString()}
+                        {new Date(visit.visitDate).toLocaleDateString()}
                       </span>
 
                       {visit.location && (
@@ -254,83 +232,79 @@ function VisitsContent() {
                     <button
                       onClick={() => {
                         setSelectedVisitId(visit.id);
-                        setSelectedChildId(
-                          visit.child.id
-                        );
+                        setSelectedChildId(visit.child.id);
                         setOpenUpsert(true);
                       }}
-                      className="text-xs text-blue-600 flex items-center gap-1"
+                      className="rounded-lg border p-2 text-blue-600 transition hover:bg-blue-50"
+                      title="Edit Visit"
+                      aria-label="Edit Visit"
                     >
-                      <Pencil size={14} />
-                      Edit
+                      <Pencil size={16} />
                     </button>
 
                     {/* VIEW RECORDS */}
                     <button
-                      onClick={() =>
-                        toggleRecords(visit.id)
+                      onClick={() => toggleRecords(visit.id)}
+                      className="rounded-lg border p-2 text-slate-600 transition hover:bg-slate-50"
+                      title={
+                        expandedVisitId === visit.id
+                          ? "Hide Records"
+                          : "View Records"
                       }
-                      className="text-xs text-slate-600 flex items-center gap-1"
+                      aria-label={
+                        expandedVisitId === visit.id
+                          ? "Hide Records"
+                          : "View Records"
+                      }
                     >
                       {expandedVisitId === visit.id ? (
-                        <ChevronUp size={14} />
+                        <ChevronUp size={16} />
                       ) : (
-                        <ChevronDown size={14} />
+                        <ChevronDown size={16} />
                       )}
-                      Records
                     </button>
 
                     {/* ATTACH */}
                     <button
                       onClick={() => {
                         setSelectedVisitId(visit.id);
-                        setSelectedChildId(
-                          visit.child.id
-                        );
+                        setSelectedChildId(visit.child.id);
                         setOpenAttach(true);
                       }}
-                      className="text-xs text-green-600 flex items-center gap-1"
+                      className="rounded-lg border p-2 text-green-600 transition hover:bg-green-50"
+                      title="Attach Records"
+                      aria-label="Attach Records"
                     >
-                      <Link2 size={14} />
-                      Attach
+                      <Link2 size={16} />
                     </button>
                   </div>
                 </div>
 
                 {/* ATTACHED RECORDS */}
-                {expandedVisitId === visit.id &&
-                  visitCache[visit.id] && (
-                    <div className="mt-4 rounded-xl bg-slate-50 p-4">
-                      {visitCache[
-                        visit.id
-                      ].records.length === 0 ? (
-                        <p className="text-sm text-slate-500">
-                          No records attached
-                        </p>
-                      ) : (
-                        visitCache[
-                          visit.id
-                        ].records.map(r => (
-                          <div
-                            key={r.id}
-                            className="flex justify-between border-b py-2 text-sm last:border-none"
-                          >
-                            <div>
-                              <p className="font-medium">
-                                {r.vaccine.name}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                {r.dose}
-                              </p>
-                            </div>
-                            <span className="text-xs text-slate-600">
-                              {r.status}
-                            </span>
+                {expandedVisitId === visit.id && visitCache[visit.id] && (
+                  <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                    {visitCache[visit.id].records.length === 0 ? (
+                      <p className="text-sm text-slate-500">
+                        No records attached
+                      </p>
+                    ) : (
+                      visitCache[visit.id].records.map((r) => (
+                        <div
+                          key={r.id}
+                          className="flex justify-between border-b py-2 text-sm last:border-none"
+                        >
+                          <div>
+                            <p className="font-medium">{r.vaccine.name}</p>
+                            <p className="text-xs text-slate-500">{r.dose}</p>
                           </div>
-                        ))
-                      )}
-                    </div>
-                  )}
+                          <span className="text-xs text-slate-600">
+                            {r.status}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -347,17 +321,15 @@ function VisitsContent() {
         />
       )}
 
-      {openAttach &&
-        selectedVisitId &&
-        selectedChildId && (
-          <AttachRecordsModal
-            open={openAttach}
-            visitId={selectedVisitId}
-            childId={selectedChildId}
-            onClose={() => setOpenAttach(false)}
-            onSaved={loadVisits}
-          />
-        )}
+      {openAttach && selectedVisitId && selectedChildId && (
+        <AttachRecordsModal
+          open={openAttach}
+          visitId={selectedVisitId}
+          childId={selectedChildId}
+          onClose={() => setOpenAttach(false)}
+          onSaved={loadVisits}
+        />
+      )}
     </>
   );
 }
