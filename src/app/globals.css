@@ -42,29 +42,129 @@ body {
 @layer utilities {
   .text-gray-800,
   .text-gray-900,
+  .text-black,
   .text-slate-800,
   .text-slate-900,
   .text-neutral-800,
-  .text-neutral-900 {
-    color: #0f172a;
+  .text-neutral-900,
+  .text-zinc-800,
+  .text-zinc-900,
+  .text-stone-800,
+  .text-stone-900,
+  .text-gray-950,
+  .text-slate-950,
+  .text-neutral-950,
+  .text-zinc-950,
+  .text-stone-950,
+  .text-foreground,
+  .text-foreground\/70,
+  .text-foreground\/80,
+  .text-foreground\/90,
+  .text-black\/70,
+  .text-black\/80,
+  .text-black\/90,
+  .text-slate-800,
+  .text-slate-900 {
+    color: #111111;
+    opacity: 1;
   }
 
+  .text-gray-50,
+  .text-gray-100,
+  .text-gray-200,
+  .text-gray-300,
   .text-gray-400,
   .text-gray-500,
+  .text-slate-50,
+  .text-slate-100,
+  .text-slate-200,
+  .text-slate-300,
   .text-slate-400,
   .text-slate-500,
+  .text-zinc-50,
+  .text-zinc-100,
+  .text-zinc-200,
+  .text-zinc-300,
+  .text-zinc-400,
+  .text-zinc-500,
+  .text-stone-50,
+  .text-stone-100,
+  .text-stone-200,
+  .text-stone-300,
+  .text-stone-400,
+  .text-stone-500,
+  .text-neutral-50,
+  .text-neutral-100,
+  .text-neutral-200,
+  .text-neutral-300,
   .text-neutral-400,
-  .text-neutral-500 {
+  .text-neutral-500,
+  .text-gray-400\/70,
+  .text-gray-400\/80,
+  .text-gray-400\/90,
+  .text-gray-500\/70,
+  .text-gray-500\/80,
+  .text-gray-500\/90,
+  .text-slate-400\/70,
+  .text-slate-400\/80,
+  .text-slate-400\/90,
+  .text-slate-500\/70,
+  .text-slate-500\/80,
+  .text-slate-500\/90,
+  .text-neutral-400\/70,
+  .text-neutral-400\/80,
+  .text-neutral-400\/90,
+  .text-neutral-500\/70,
+  .text-neutral-500\/80,
+  .text-neutral-500\/90 {
     color: #334155;
+    opacity: 1;
   }
 
   .text-gray-600,
   .text-gray-700,
   .text-slate-600,
   .text-slate-700,
+  .text-zinc-600,
+  .text-zinc-700,
+  .text-stone-600,
+  .text-stone-700,
   .text-neutral-600,
-  .text-neutral-700 {
+  .text-neutral-700,
+  .text-gray-600\/70,
+  .text-gray-600\/80,
+  .text-gray-600\/90,
+  .text-gray-700\/70,
+  .text-gray-700\/80,
+  .text-gray-700\/90,
+  .text-slate-600\/70,
+  .text-slate-600\/80,
+  .text-slate-600\/90,
+  .text-slate-700\/70,
+  .text-slate-700\/80,
+  .text-slate-700\/90,
+  .text-neutral-600\/70,
+  .text-neutral-600\/80,
+  .text-neutral-600\/90,
+  .text-neutral-700\/70,
+  .text-neutral-700\/80,
+  .text-neutral-700\/90 {
     color: #1f2937;
+    opacity: 1;
+  }
+
+  .placeholder\:text-gray-400::placeholder,
+  .placeholder\:text-gray-500::placeholder,
+  .placeholder\:text-slate-400::placeholder,
+  .placeholder\:text-slate-500::placeholder,
+  .placeholder\:text-zinc-400::placeholder,
+  .placeholder\:text-zinc-500::placeholder,
+  .placeholder\:text-stone-400::placeholder,
+  .placeholder\:text-stone-500::placeholder,
+  .placeholder\:text-neutral-400::placeholder,
+  .placeholder\:text-neutral-500::placeholder {
+    color: #475569;
+    opacity: 1;
   }
 
   .text-white\/70,
@@ -80,13 +180,72 @@ input:disabled,
 textarea:disabled,
 select:disabled,
 [aria-disabled='true'] {
-  opacity: 1;
+  opacity: 1 !important;
 }
 
 input::placeholder,
-textarea::placeholder {
+textarea::placeholder,
+select::placeholder {
   color: #475569;
   opacity: 1;
+}
+
+input,
+textarea,
+select,
+option {
+  color: #111111;
+  opacity: 1;
+  -webkit-text-fill-color: #111111;
+}
+
+input::-webkit-date-and-time-value,
+input::-webkit-datetime-edit,
+input::-webkit-datetime-edit-text,
+input::-webkit-datetime-edit-month-field,
+input::-webkit-datetime-edit-day-field,
+input::-webkit-datetime-edit-year-field,
+input::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+input::-webkit-date-and-time-value,
+input::-webkit-datetime-edit,
+input::-webkit-datetime-edit-text,
+input::-webkit-datetime-edit-month-field,
+input::-webkit-datetime-edit-day-field,
+input::-webkit-datetime-edit-year-field {
+  color: #111111;
+  -webkit-text-fill-color: #111111;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #111111;
+  transition: background-color 9999s ease-out 0s;
+}
+
+input::selection,
+textarea::selection,
+select::selection,
+p::selection,
+span::selection,
+label::selection,
+h1::selection,
+h2::selection,
+h3::selection,
+h4::selection,
+h5::selection,
+h6::selection {
+  color: #111111;
+  background: #bfdbfe;
 }
 
 .btn-blue {
