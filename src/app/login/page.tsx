@@ -56,6 +56,8 @@ function LoginContent() {
       /* ================= STORE SESSION ================= */
       sessionStorage.setItem('token', data.token);
       sessionStorage.setItem('user', JSON.stringify(data.data));
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.data));
 
       /* ================= ROLE-BASED REDIRECT ================= */
       const roleName = String(data.data.roleName || '')

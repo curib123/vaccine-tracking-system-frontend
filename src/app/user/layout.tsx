@@ -17,15 +17,15 @@ export default function ProtectedLayout({
 
   return (
     <ParentGuard>
-      <div className="min-h-screen bg-slate-50 flex">
+      <div className="flex min-h-screen bg-slate-50">
 
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex w-64">
+        <aside className="hidden w-64 md:sticky md:top-0 md:flex md:h-screen md:self-start">
           <Sidebar />
         </aside>
 
         {/* Main */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
 
           {/* Mobile Topbar */}
           <div className="md:hidden">

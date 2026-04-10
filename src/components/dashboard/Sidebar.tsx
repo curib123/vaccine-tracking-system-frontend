@@ -7,7 +7,7 @@ import {
 
 import {
   Baby,
-  CalendarDays,
+  Bell,
   CalendarRange,
   LayoutDashboard,
   LogOut,
@@ -15,7 +15,6 @@ import {
   Speaker,
   Syringe,
   UserCog,
-  Users,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -25,6 +24,7 @@ import {
 } from 'next/navigation';
 
 import AlertModal from '@/components/modal/AlertModal';
+import useUnreadNotifications from '@/hooks/useUnreadNotifications';
 import api from '@/lib/api';
 
 /* ================= PERMISSIONS ================= */
@@ -33,7 +33,6 @@ enum PermissionCode {
   VIEW_ANNOUNCEMENT = 'VIEW_ANNOUNCEMENT',
 
   MANAGE_CHILDREN = 'MANAGE_CHILDREN',
-  MANAGE_PARENTS = 'MANAGE_PARENTS',
 
   MANAGE_IMMUNIZATION = 'MANAGE_IMMUNIZATION',
   MANAGE_VACCINES = 'MANAGE_VACCINES',
@@ -79,22 +78,9 @@ const links = [
     required: PermissionCode.MANAGE_CHILDREN,
   },
   {
-    href: '/admin/parents',
-    label: 'Parent Management',
-    icon: Users,
-    required: PermissionCode.MANAGE_PARENTS,
-  },
-  {
-    href: '/admin/visits',
-    label: 'Visits',
-    icon: CalendarDays,
-    required: PermissionCode.MANAGE_IMMUNIZATION,
-  },
-  {
-    href: '/admin/immunization',
-    label: 'Immunization Records',
-    icon: Syringe,
-    required: PermissionCode.MANAGE_IMMUNIZATION,
+    href: '/admin/notifications',
+    label: 'Notifications',
+    icon: Bell,
   },
   {
     href: '/admin/due-immunizations',
@@ -126,6 +112,7 @@ const links = [
 export default function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const unreadCount = useUnreadNotifications();
 
   /* ================= PERMISSION STATE ================= */
   const [permissionSet, setPermissionSet] =
@@ -185,7 +172,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       {/* ================= SIDEBAR ================= */}
       <aside
         className={`
-          min-h-screen flex flex-col
+          sticky top-0 self-start flex h-screen flex-col overflow-y-auto
           transition-all duration-300
           ${collapsed ? 'w-[88px]' : 'w-80'}
           bg-gradient-to-b from-[#0B4FB3] to-[#0A3F8F]
@@ -203,6 +190,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               src="/logo.png"
               alt="ImmuniTrack Logo"
               fill
+              sizes={collapsed ? '56px' : '80px'}
               className="object-contain"
               priority
             />
@@ -249,10 +237,22 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 >
                   <Icon size={22} className="shrink-0" />
                   {!collapsed && (
-                    <span className="text-base font-medium">
-                      {link.label}
-                    </span>
+                    <>
+                      <span className="text-base font-medium">
+                        {link.label}
+                      </span>
+                      {link.href === '/admin/notifications' && unreadCount > 0 ? (
+                        <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-slate-900">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      ) : null}
+                    </>
                   )}
+                  {collapsed && link.href === '/admin/notifications' && unreadCount > 0 ? (
+                    <span className="absolute right-3 top-2 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-semibold text-slate-900">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}

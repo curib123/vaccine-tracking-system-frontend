@@ -9,10 +9,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  LucideIcon,
   Percent,
   Users,
 } from 'lucide-react';
 
+import NotificationPanel from '@/components/dashboard/NotificationPanel';
 import ParentGuard from '@/components/guards/ParentGuard';
 import AlertModal from '@/components/modal/AlertModal';
 import { CardListSkeleton } from '@/components/ui/Shimmer';
@@ -56,25 +58,23 @@ export default function ParentDashboardPage() {
 function ParentDashboardContent() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<SessionUser | null>(null);
+  const [user] = useState<SessionUser | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const raw = sessionStorage.getItem('user');
+    if (!raw) return null;
+
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  });
 
   const [alert, setAlert] = useState({
     open: false,
     type: 'error' as 'error' | 'success',
     message: '',
   });
-
-  /* ===== LOAD USER ===== */
-  useEffect(() => {
-    const raw = sessionStorage.getItem('user');
-    if (!raw) return;
-
-    try {
-      setUser(JSON.parse(raw));
-    } catch {
-      // ignore malformed session
-    }
-  }, []);
 
   /* ===== LOAD DASHBOARD ===== */
   useEffect(() => {
@@ -163,6 +163,8 @@ function ParentDashboardContent() {
               accent="blue"
               emphasize
             />
+
+            <NotificationPanel title="Reminder Inbox" href="/user/notifications" />
           </section>
         )
       )}
@@ -193,7 +195,7 @@ function StatCard({
 }: {
   label: string;
   value: number | string;
-  icon: any;
+  icon: LucideIcon;
   accent?: 'slate' | 'green' | 'amber' | 'red' | 'blue';
   emphasize?: boolean;
 }) {

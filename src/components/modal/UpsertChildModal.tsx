@@ -1,61 +1,81 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import AlertModal from '@/components/modal/AlertModal';
 import api from '@/lib/api';
 
-/* ================= TYPES ================= */
+const getErrorMessage = (error: unknown, fallback: string) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'response' in error &&
+  typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+    ? (error as { response?: { data?: { message?: string } } }).response?.data?.message || fallback
+    : fallback;
+
 type Parent = {
   id: number;
   firstName: string;
   middleName?: string;
   lastName: string;
   email: string;
-};
-
-type Vaccine = {
-  id: number;
-  name: string;
-  recommendedAge?: string;
+  address?: string;
 };
 
 type ChildForm = {
   parentId: number | '';
+  ranking: string;
   firstName: string;
   middleName: string;
   lastName: string;
   gender: 'MALE' | 'FEMALE' | '';
   birthDate: string;
   birthPlace: string;
+  address: string;
+  motherName: string;
+  fatherName: string;
+  birthHeightCm: string;
+  birthWeightKg: string;
+  healthCenter: string;
+  barangay: string;
+  familyNumber: string;
 };
 
 type Props = {
   open: boolean;
   childId?: number | null;
+  preselectedParent?: Parent | null;
   onClose: () => void;
   onSaved: () => void;
 };
 
-/* ================= INITIAL ================= */
 const initialForm: ChildForm = {
   parentId: '',
+  ranking: '',
   firstName: '',
   middleName: '',
   lastName: '',
   gender: '',
   birthDate: '',
   birthPlace: '',
+  address: '',
+  motherName: '',
+  fatherName: '',
+  birthHeightCm: '',
+  birthWeightKg: '',
+  healthCenter: '',
+  barangay: '',
+  familyNumber: '',
 };
 
-/* ================= COMPONENT ================= */
+const inputClass =
+  'mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm ' +
+  'text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
+
 export default function UpsertChildModal({
   open,
   childId,
+  preselectedParent = null,
   onClose,
   onSaved,
 }: Props) {
@@ -63,26 +83,15 @@ export default function UpsertChildModal({
 
   const [form, setForm] = useState<ChildForm>(initialForm);
   const [parents, setParents] = useState<Parent[]>([]);
-  const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [query, setQuery] = useState('');
-  const [openList, setOpenList] = useState(false);
-  const [selectedVaccineIds, setSelectedVaccineIds] = useState<number[]>([]);
-  const [autoGenerateRecords, setAutoGenerateRecords] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const firstNameRef = useRef<HTMLInputElement>(null);
-  const middleNameRef = useRef<HTMLInputElement>(null);
-  const lastNameRef = useRef<HTMLInputElement>(null);
-  const birthDateRef = useRef<HTMLInputElement>(null);
-  const birthPlaceRef = useRef<HTMLInputElement>(null);
-
   const [alert, setAlert] = useState({
     open: false,
     type: 'success' as 'success' | 'error',
+    title: '',
     message: '',
   });
 
-  /* ================= LOAD PARENTS ================= */
   useEffect(() => {
     if (!open) return;
 
@@ -93,122 +102,111 @@ export default function UpsertChildModal({
         setAlert({
           open: true,
           type: 'error',
+          title: 'Load Failed',
           message: 'Failed to load parents',
-        })
-      );
-
-    api
-      .get('/vaccine/getAllVaccines', {
-        params: {
-          limit: 500,
-          sortBy: 'name',
-          sortOrder: 'asc',
-        },
-      })
-      .then(res => setVaccines(res.data.data || []))
-      .catch(() =>
-        setAlert({
-          open: true,
-          type: 'error',
-          message: 'Failed to load vaccines',
         })
       );
   }, [open]);
 
-  /* ================= LOAD CHILD (EDIT MODE) ================= */
   useEffect(() => {
     if (!open) return;
 
     if (!isEdit) {
-      setForm(initialForm);
-      setQuery('');
-      setSelectedVaccineIds([]);
-      setAutoGenerateRecords(true);
+      setForm({
+        ...initialForm,
+        parentId: preselectedParent?.id ?? '',
+        address: preselectedParent?.address || '',
+      });
+      setQuery(
+        preselectedParent
+          ? `${preselectedParent.firstName} ${preselectedParent.lastName} (${preselectedParent.email})`
+          : ''
+      );
       return;
     }
 
     api
       .get(`/child/getChildById/${childId}`)
       .then(res => {
-        const c = res.data.data;
+        const child = res.data.data;
 
-        const filled: ChildForm = {
-          parentId: c.parent?.id || '',
-          firstName: c.firstName || '',
-          middleName: c.middleName || '',
-          lastName: c.lastName || '',
-          gender: c.gender || '',
-          birthDate: c.birthDate?.split('T')[0] || '',
-          birthPlace: c.birthPlace || '',
-        };
-
-        setForm(filled);
-
-        // 🔑 Sync inputs (fix browser autofill mismatch)
-        requestAnimationFrame(() => {
-          if (firstNameRef.current) firstNameRef.current.value = filled.firstName;
-          if (middleNameRef.current) middleNameRef.current.value = filled.middleName;
-          if (lastNameRef.current) lastNameRef.current.value = filled.lastName;
-          if (birthDateRef.current) birthDateRef.current.value = filled.birthDate;
-          if (birthPlaceRef.current) birthPlaceRef.current.value = filled.birthPlace;
+        setForm({
+          parentId: child.parent?.id || '',
+          ranking: child.ranking?.toString() || '',
+          firstName: child.firstName || '',
+          middleName: child.middleName || '',
+          lastName: child.lastName || '',
+          gender: child.gender || '',
+          birthDate: child.birthDate?.split('T')[0] || '',
+          birthPlace: child.birthPlace || '',
+          address: child.address || '',
+          motherName: child.motherName || '',
+          fatherName: child.fatherName || '',
+          birthHeightCm: child.birthHeightCm?.toString() || '',
+          birthWeightKg: child.birthWeightKg?.toString() || '',
+          healthCenter: child.healthCenter || '',
+          barangay: child.barangay || '',
+          familyNumber: child.familyNumber || '',
         });
 
-        if (c.parent) {
-          setQuery(
-            `${c.parent.firstName} ${c.parent.lastName} (${c.parent.email})`
-          );
+        if (child.parent) {
+          setQuery(`${child.parent.firstName} ${child.parent.lastName} (${child.parent.email})`);
         }
       })
       .catch(() =>
         setAlert({
           open: true,
           type: 'error',
-          message: 'Failed to load child data',
+          title: 'Load Failed',
+          message: 'Failed to load child information',
         })
       );
-  }, [open, childId, isEdit]);
+  }, [open, childId, isEdit, preselectedParent]);
 
-  const toggleVaccine = (vaccineId: number) => {
-    setSelectedVaccineIds(ids =>
-      ids.includes(vaccineId)
-        ? ids.filter(id => id !== vaccineId)
-        : [...ids, vaccineId]
+  const filteredParents = useMemo(() => {
+    const lowered = query.toLowerCase();
+    return parents.filter(parent =>
+      `${parent.firstName} ${parent.middleName ?? ''} ${parent.lastName} ${parent.email}`
+        .toLowerCase()
+        .includes(lowered)
     );
+  }, [parents, query]);
+
+  const updateField = (field: keyof ChildForm, value: string | number) =>
+    setForm(current => ({ ...current, [field]: value as never }));
+
+  const selectParent = (parent: Parent) => {
+    setForm(current => ({
+      ...current,
+      parentId: parent.id,
+      address: current.address || parent.address || '',
+    }));
+    setQuery(`${parent.firstName} ${parent.lastName} (${parent.email})`);
   };
 
-  /* ================= FILTER PARENTS ================= */
-  const filteredParents = parents.filter(p =>
-    `${p.firstName} ${p.middleName ?? ''} ${p.lastName} ${p.email}`
-      .toLowerCase()
-      .includes(query.toLowerCase())
-  );
-
-  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
-    const syncedForm: ChildForm = {
-      parentId: form.parentId,
-      firstName: firstNameRef.current?.value.trim() || '',
-      middleName: middleNameRef.current?.value.trim() || '',
-      lastName: lastNameRef.current?.value.trim() || '',
-      gender: form.gender,
-      birthDate: birthDateRef.current?.value || '',
-      birthPlace: birthPlaceRef.current?.value.trim() || '',
-    };
-
-    setForm(syncedForm);
-
     if (
-      !syncedForm.parentId ||
-      !syncedForm.firstName ||
-      !syncedForm.lastName ||
-      !syncedForm.gender ||
-      !syncedForm.birthDate ||
-      !syncedForm.birthPlace
+      !form.parentId ||
+      !form.ranking ||
+      !form.firstName ||
+      !form.lastName ||
+      !form.gender ||
+      !form.birthDate ||
+      !form.birthPlace ||
+      !form.address ||
+      !form.motherName ||
+      !form.fatherName ||
+      !form.birthHeightCm ||
+      !form.birthWeightKg ||
+      !form.healthCenter ||
+      !form.barangay ||
+      !form.familyNumber
     ) {
       setAlert({
         open: true,
         type: 'error',
-        message: 'Please complete all required fields',
+        title: 'Missing Information',
+        message: 'Please complete all required child immunization card fields.',
       });
       return;
     }
@@ -216,254 +214,286 @@ export default function UpsertChildModal({
     setSaving(true);
 
     try {
-      let createdChildId = childId ?? null;
+      const payload = {
+        ...form,
+        birthHeightCm: form.birthHeightCm || null,
+        birthWeightKg: form.birthWeightKg || null,
+      };
 
       if (isEdit) {
-        await api.put(`/child/update/${childId}`, syncedForm);
+        await api.put(`/child/update/${childId}`, payload);
       } else {
-        const res = await api.post('/child/create', syncedForm);
-        createdChildId =
-          res?.data?.data?.id ??
-          res?.data?.id ??
-          null;
-
-        if (
-          autoGenerateRecords &&
-          createdChildId &&
-          selectedVaccineIds.length > 0
-        ) {
-          await api.post('/records/generate/by-vaccines', {
-            childId: createdChildId,
-            vaccineIds: selectedVaccineIds,
-          });
-        }
+        await api.post('/child/create', payload);
       }
+
+      await Promise.resolve(onSaved());
+      onClose();
 
       setAlert({
         open: true,
         type: 'success',
+        title: isEdit ? 'Child Updated' : 'Child Registered',
         message: isEdit
-          ? 'Child updated successfully'
-          : autoGenerateRecords && selectedVaccineIds.length > 0
-            ? 'Child created and vaccine records generated successfully'
-            : 'Child created successfully',
+          ? 'Child information updated successfully.'
+          : 'Child registered and vaccine schedule generated automatically.',
       });
-
-      onSaved();
-    } catch (err: any) {
+    } catch (error: unknown) {
       setAlert({
         open: true,
         type: 'error',
-        message:
-          err?.response?.data?.message ||
-          'Failed to save child',
+        title: isEdit ? 'Update Failed' : 'Registration Failed',
+        message: getErrorMessage(error, 'Failed to save child'),
       });
     } finally {
       setSaving(false);
     }
   };
 
-  if (!open) return null;
+  if (!open && !alert.open) return null;
 
-  /* ================= RENDER ================= */
   return (
     <>
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-        <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
-          {/* HEADER */}
-          <div className="px-6 py-5 border-b">
-            <h2 className="text-lg font-semibold text-slate-800">
-              {isEdit ? 'Update Child' : 'Register Child'}
-            </h2>
-            <p className="text-sm text-slate-500">
-              Child personal information
-            </p>
-          </div>
-
-          {/* BODY */}
-          <div className="px-6 py-5 space-y-4">
-            {/* PARENT SEARCH */}
-            <div className="relative">
-              <label className="text-sm font-medium text-slate-700">
-                Parent / Guardian <span className="text-red-500">*</span>
-              </label>
-
-              <input
-                autoComplete="off"
-                placeholder="Search parent name or email"
-                value={query}
-                onChange={e => {
-                  setQuery(e.target.value);
-                  setOpenList(true);
-                  setForm({ ...form, parentId: '' });
-                }}
-                onFocus={() => setOpenList(true)}
-                className="mt-1 w-full px-4 py-2.5 rounded-xl border"
-              />
-
-              {openList && filteredParents.length > 0 && (
-                <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-xl border bg-white shadow-lg">
-                  {filteredParents.map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        setForm({ ...form, parentId: p.id });
-                        setQuery(
-                          `${p.firstName} ${p.lastName} (${p.email})`
-                        );
-                        setOpenList(false);
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-blue-50"
-                    >
-                      <div className="font-medium">
-                        {p.firstName} {p.lastName}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {p.email}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+      {open ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+            <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
+              <h2 className="text-xl font-semibold text-slate-900">
+                {isEdit ? 'Update Child Record' : 'Register Child'}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                The vaccine schedule follows the physical child immunization card and is generated automatically after registration.
+              </p>
             </div>
 
-            {/* NAME */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <input ref={firstNameRef} placeholder="First name *" className="px-4 py-2.5 rounded-xl border" />
-              <input ref={middleNameRef} placeholder="Middle name" className="px-4 py-2.5 rounded-xl border" />
-              <input ref={lastNameRef} placeholder="Last name *" className="px-4 py-2.5 rounded-xl border" />
-            </div>
+            <div className="max-h-[72vh] space-y-6 overflow-y-auto px-6 py-6">
+              <section className="rounded-[24px] border border-slate-200 p-5">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Parent / Guardian
+                </h3>
 
-            {/* GENDER + BIRTH */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <select
-                value={form.gender}
-                onChange={e => setForm({ ...form, gender: e.target.value as any })}
-                className="px-4 py-2.5 rounded-xl border"
-              >
-                <option value="">Select gender *</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-              </select>
-
-              <input ref={birthDateRef} type="date" className="px-4 py-2.5 rounded-xl border" />
-            </div>
-
-            {/* BIRTH PLACE */}
-            <input ref={birthPlaceRef} placeholder="Birth place *" className="px-4 py-2.5 rounded-xl border" />
-
-            {!isEdit && (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                <div className="flex items-start justify-between gap-4">
+                <div className="mt-4 space-y-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      Initial Immunization Schedule
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Generate the child&apos;s pending vaccine records immediately after registration.
-                    </p>
+                    <label className="text-sm font-medium text-slate-700">Search parent</label>
+                    <input
+                      value={query}
+                      onChange={e => {
+                        setQuery(e.target.value);
+                        setForm(current => ({ ...current, parentId: '' }));
+                      }}
+                      placeholder="Type parent name or email"
+                      className={inputClass}
+                      disabled={Boolean(preselectedParent) && !isEdit}
+                    />
                   </div>
 
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={autoGenerateRecords}
-                      onChange={e =>
-                        setAutoGenerateRecords(e.target.checked)
-                      }
-                    />
-                    Auto-generate
-                  </label>
-                </div>
+                  <div className="grid gap-2 rounded-2xl bg-slate-50 p-3 sm:grid-cols-2">
+                    {filteredParents.slice(0, 6).map(parent => (
+                      <button
+                        key={parent.id}
+                        type="button"
+                        onClick={() => selectParent(parent)}
+                        className={`rounded-2xl border px-4 py-3 text-left transition ${
+                          form.parentId === parent.id
+                            ? 'border-sky-300 bg-sky-50'
+                            : 'border-slate-200 bg-white hover:border-sky-200'
+                        }`}
+                      >
+                        <div className="font-semibold text-slate-900">
+                          {parent.firstName} {parent.lastName}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">{parent.email}</div>
+                      </button>
+                    ))}
+                  </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedVaccineIds(vaccines.map(v => v.id))
-                    }
-                    className="rounded-lg border px-3 py-1.5 text-xs text-slate-700"
-                  >
-                    Select All
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedVaccineIds([])}
-                    className="rounded-lg border px-3 py-1.5 text-xs text-slate-700"
-                  >
-                    Clear
-                  </button>
-                </div>
-
-                <div className="max-h-52 space-y-2 overflow-auto rounded-xl border bg-white p-3">
-                  {vaccines.length === 0 ? (
-                    <p className="text-sm text-slate-500">
-                      No vaccines available yet. Create vaccine templates first.
+                  {preselectedParent && !isEdit ? (
+                    <p className="text-xs text-slate-500">
+                      New child will be registered under this parent card.
                     </p>
-                  ) : (
-                    vaccines.map(vaccine => {
-                      const selected = selectedVaccineIds.includes(vaccine.id);
-
-                      return (
-                        <label
-                          key={vaccine.id}
-                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2 transition ${
-                            selected
-                              ? 'border-blue-200 bg-blue-50'
-                              : 'border-slate-200 bg-white'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => toggleVaccine(vaccine.id)}
-                          />
-
-                          <div>
-                            <div className="text-sm font-medium text-slate-900">
-                              {vaccine.name}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              {vaccine.recommendedAge || 'No recommended age'}
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })
-                  )}
+                  ) : null}
                 </div>
-              </div>
-            )}
-          </div>
+              </section>
 
-          {/* FOOTER */}
-          <div className="flex justify-end gap-3 px-6 py-4 border-t">
-            <button onClick={onClose} className="px-5 py-2.5 rounded-xl border">
-              Cancel
-            </button>
+              <section className="rounded-[24px] border border-slate-200 p-5">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Child Information
+                </h3>
 
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 text-white disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : isEdit ? 'Update Child' : 'Create Child'}
-            </button>
+                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                  <Field label="Birth order *">
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.ranking}
+                      onChange={e => updateField('ranking', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="First name *">
+                    <input
+                      value={form.firstName}
+                      onChange={e => updateField('firstName', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Middle name">
+                    <input
+                      value={form.middleName}
+                      onChange={e => updateField('middleName', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Last name *">
+                    <input
+                      value={form.lastName}
+                      onChange={e => updateField('lastName', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Gender *">
+                    <select
+                      value={form.gender}
+                      onChange={e => updateField('gender', e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select gender</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                    </select>
+                  </Field>
+                  <Field label="Date of birth *">
+                    <input
+                      type="date"
+                      value={form.birthDate}
+                      onChange={e => updateField('birthDate', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Place of birth *">
+                    <input
+                      value={form.birthPlace}
+                      onChange={e => updateField('birthPlace', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Address *">
+                    <input
+                      value={form.address}
+                      onChange={e => updateField('address', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Mother's name *">
+                    <input
+                      value={form.motherName}
+                      onChange={e => updateField('motherName', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Father's name *">
+                    <input
+                      value={form.fatherName}
+                      onChange={e => updateField('fatherName', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                </div>
+              </section>
+
+              <section className="rounded-[24px] border border-slate-200 p-5">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Card Details
+                </h3>
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <Field label="Birth height (cm) *">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={form.birthHeightCm}
+                      onChange={e => updateField('birthHeightCm', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Birth weight (kg) *">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={form.birthWeightKg}
+                      onChange={e => updateField('birthWeightKg', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Health center *">
+                    <input
+                      value={form.healthCenter}
+                      onChange={e => updateField('healthCenter', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Barangay *">
+                    <input
+                      value={form.barangay}
+                      onChange={e => updateField('barangay', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="Family number *">
+                    <input
+                      value={form.familyNumber}
+                      onChange={e => updateField('familyNumber', e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                </div>
+              </section>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={saving}
+                className="rounded-2xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : isEdit ? 'Update Child' : 'Register Child'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <AlertModal
         open={alert.open}
         type={alert.type}
+        title={alert.title}
         message={alert.message}
         onClose={() => {
-          setAlert(p => ({ ...p, open: false }));
-          if (alert.type === 'success') onClose();
+          setAlert(current => ({ ...current, open: false }));
         }}
       />
     </>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block text-sm font-medium text-slate-700">
+      {label}
+      {children}
+    </label>
   );
 }

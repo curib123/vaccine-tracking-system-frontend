@@ -1,62 +1,94 @@
 'use client';
 
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useEffect, useState } from 'react';
+
+import { Plus, Trash2 } from 'lucide-react';
 
 import AlertModal from '@/components/modal/AlertModal';
 import api from '@/lib/api';
 
-/* ================= TYPES ================= */
-type Schedule = {
+const getErrorMessage = (error: unknown, fallback: string) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'response' in error &&
+  typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+    ? (error as { response?: { data?: { message?: string } } }).response?.data?.message || fallback
+    : fallback;
+
+type ScheduleForm = {
   doseLabel: string;
-  doseNumber: number;
-  recommendedAgeInMonths: number;
-  intervalDays?: number | '';
+  doseNumber: string;
+  recommendedAgeLabel: string;
+  dueDaysFromBirth: string;
+  intervalDays: string;
 };
 
-type VaccineForm = {
+type VaccinePayload = {
+  id: number;
+  code: string;
   name: string;
-  description: string;
+  description?: string;
   recommendedAge: string;
-  totalDoses: number | '';
-  requiresBooster: boolean;
-  boosterAfterMonths: number | '';
-  schedules: Schedule[];
+  totalDoses?: number | null;
+  stockQuantity: number;
+  reorderLevel: number;
+  unit: string;
+  displayOrder?: number | null;
+  schedules: Array<{
+    doseLabel: string;
+    doseNumber: number;
+    recommendedAgeLabel: string;
+    dueDaysFromBirth: number;
+    intervalDays?: number | null;
+  }>;
 };
 
 type Props = {
   open: boolean;
   vaccineId?: number | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
 };
 
-/* ================= INITIAL ================= */
+type VaccineForm = {
+  code: string;
+  name: string;
+  description: string;
+  recommendedAge: string;
+  totalDoses: string;
+  stockQuantity: string;
+  reorderLevel: string;
+  unit: string;
+  displayOrder: string;
+  schedules: ScheduleForm[];
+};
+
+const inputClass =
+  'mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm ' +
+  'text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
+
+const emptySchedule = (doseNumber = 1): ScheduleForm => ({
+  doseLabel: `Dose ${doseNumber}`,
+  doseNumber: String(doseNumber),
+  recommendedAgeLabel: '',
+  dueDaysFromBirth: '',
+  intervalDays: '',
+});
+
 const initialForm: VaccineForm = {
+  code: '',
   name: '',
   description: '',
   recommendedAge: '',
   totalDoses: '',
-  requiresBooster: false,
-  boosterAfterMonths: '',
-  schedules: [],
+  stockQuantity: '0',
+  reorderLevel: '10',
+  unit: 'dose',
+  displayOrder: '',
+  schedules: [emptySchedule(1)],
 };
 
-/* ================= STYLES ================= */
-const input =
-  'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm ' +
-  'focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none';
-
-const label =
-  'text-xs font-semibold text-slate-700 uppercase tracking-wide';
-
-const guide =
-  'mt-1 text-xs text-slate-500 leading-relaxed';
-
-/* ================= COMPONENT ================= */
-function UpsertVaccineModalContent({
+export default function UpsertVaccineModal({
   open,
   vaccineId,
   onClose,
@@ -69,112 +101,142 @@ function UpsertVaccineModalContent({
   const [alert, setAlert] = useState({
     open: false,
     type: 'success' as 'success' | 'error',
+    title: '',
     message: '',
   });
 
-  /* ================= LOAD (EDIT MODE) ================= */
   useEffect(() => {
     if (!open) return;
+
+    setSaving(false);
+    setAlert({
+      open: false,
+      type: 'success',
+      title: '',
+      message: '',
+    });
 
     if (!isEdit) {
       setForm(initialForm);
       return;
     }
 
-    (async () => {
-      try {
-        const res = await api.get(
-          `/vaccine/getVaccineById/${vaccineId}`
-        );
-        const v = res.data.data;
+    api
+      .get(`/vaccine/getVaccineById/${vaccineId}`)
+      .then(res => {
+        const vaccine: VaccinePayload = res.data.data;
 
         setForm({
-          name: v.name || '',
-          description: v.description || '',
-          recommendedAge: v.recommendedAge || '',
-          totalDoses: v.totalDoses ?? '',
-          requiresBooster: v.requiresBooster ?? false,
-          boosterAfterMonths: v.boosterAfterMonths ?? '',
-          schedules: v.schedules || [],
+          code: vaccine.code || '',
+          name: vaccine.name || '',
+          description: vaccine.description || '',
+          recommendedAge: vaccine.recommendedAge || '',
+          totalDoses: vaccine.totalDoses?.toString() || '',
+          stockQuantity: vaccine.stockQuantity?.toString() || '0',
+          reorderLevel: vaccine.reorderLevel?.toString() || '10',
+          unit: vaccine.unit || 'dose',
+          displayOrder: vaccine.displayOrder?.toString() || '',
+          schedules:
+            vaccine.schedules?.map(schedule => ({
+              doseLabel: schedule.doseLabel || '',
+              doseNumber: schedule.doseNumber?.toString() || '',
+              recommendedAgeLabel: schedule.recommendedAgeLabel || '',
+              dueDaysFromBirth: schedule.dueDaysFromBirth?.toString() || '',
+              intervalDays: schedule.intervalDays?.toString() || '',
+            })) || [emptySchedule(1)],
         });
-      } catch {
+      })
+      .catch(error =>
         setAlert({
           open: true,
           type: 'error',
-          message: 'Failed to load vaccine data.',
-        });
-      }
-    })();
-  }, [open, vaccineId, isEdit]);
+          title: 'Load Failed',
+          message: getErrorMessage(error, 'Failed to load vaccine details.'),
+        })
+      );
+  }, [isEdit, open, vaccineId]);
 
-  /* ================= DOSE SCHEDULE HELPERS ================= */
+  const updateField = (field: keyof Omit<VaccineForm, 'schedules'>, value: string) =>
+    setForm(current => ({ ...current, [field]: value }));
+
+  const updateSchedule = (index: number, field: keyof ScheduleForm, value: string) =>
+    setForm(current => ({
+      ...current,
+      schedules: current.schedules.map((schedule, scheduleIndex) =>
+        scheduleIndex === index ? { ...schedule, [field]: value } : schedule
+      ),
+    }));
+
   const addSchedule = () =>
-    setForm({
-      ...form,
-      schedules: [
-        ...form.schedules,
-        {
-          doseLabel: '',
-          doseNumber: form.schedules.length + 1,
-          recommendedAgeInMonths: 0,
-          intervalDays: '',
-        },
-      ],
-    });
-
-  const updateSchedule = (
-    index: number,
-    field: keyof Schedule,
-    value: any
-  ) => {
-    const updated = [...form.schedules];
-    updated[index] = { ...updated[index], [field]: value };
-    setForm({ ...form, schedules: updated });
-  };
+    setForm(current => ({
+      ...current,
+      schedules: [...current.schedules, emptySchedule(current.schedules.length + 1)],
+    }));
 
   const removeSchedule = (index: number) =>
-    setForm({
-      ...form,
-      schedules: form.schedules.filter((_, i) => i !== index),
+    setForm(current => {
+      const nextSchedules = current.schedules.filter((_, scheduleIndex) => scheduleIndex !== index);
+
+      return {
+        ...current,
+        schedules:
+          nextSchedules.length > 0
+            ? nextSchedules.map((schedule, scheduleIndex) => ({
+                ...schedule,
+                doseNumber: String(scheduleIndex + 1),
+              }))
+            : [emptySchedule(1)],
+      };
     });
 
-  /* ================= SUBMIT ================= */
-  const handleSubmit = async () => {
-    if (!form.name || !form.recommendedAge) {
-      setAlert({
-        open: true,
-        type: 'error',
-        message:
-          'Vaccine name and recommended age description are required.',
-      });
-      return;
-    }
-
+  const handleSave = async () => {
     setSaving(true);
 
     try {
+      const payload = {
+        code: form.code || undefined,
+        name: form.name,
+        description: form.description || undefined,
+        recommendedAge: form.recommendedAge,
+        totalDoses: form.totalDoses || undefined,
+        stockQuantity: Number(form.stockQuantity || 0),
+        reorderLevel: Number(form.reorderLevel || 0),
+        unit: form.unit || 'dose',
+        displayOrder: form.displayOrder || undefined,
+        schedules: form.schedules.map(schedule => ({
+          doseLabel: schedule.doseLabel,
+          doseNumber: Number(schedule.doseNumber),
+          recommendedAgeLabel: schedule.recommendedAgeLabel,
+          dueDaysFromBirth: Number(schedule.dueDaysFromBirth),
+          intervalDays: schedule.intervalDays === '' ? null : Number(schedule.intervalDays),
+        })),
+      };
+
       if (isEdit) {
-        await api.put(`/vaccine/update/${vaccineId}`, form);
+        await api.put(`/vaccine/update/${vaccineId}`, payload);
       } else {
-        await api.post('/vaccine/create', form);
+        await api.post('/vaccine/create', payload);
       }
+
+      await Promise.resolve(onSaved());
 
       setAlert({
         open: true,
         type: 'success',
+        title: isEdit ? 'Vaccine Updated' : 'Vaccine Added',
         message: isEdit
-          ? 'Vaccine updated successfully.'
-          : 'Vaccine created successfully.',
+          ? 'The vaccine details were updated successfully.'
+          : 'The new vaccine was added successfully.',
       });
-
-      onSaved();
-    } catch (err: any) {
+    } catch (error: unknown) {
       setAlert({
         open: true,
         type: 'error',
-        message:
-          err?.response?.data?.message ||
-          'Failed to save vaccine.',
+        title: isEdit ? 'Update Failed' : 'Add Failed',
+        message: getErrorMessage(
+          error,
+          isEdit ? 'Failed to update vaccine.' : 'Failed to add vaccine.'
+        ),
       });
     } finally {
       setSaving(false);
@@ -185,315 +247,236 @@ function UpsertVaccineModalContent({
 
   return (
     <>
-      {/* MODAL */}
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-        <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl">
-
-          {/* HEADER */}
-          <div className="px-6 py-5 border-b">
-            <h2 className="text-lg font-semibold text-slate-900">
-              {isEdit ? 'Update Vaccine' : 'Create Vaccine'}
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+        <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+          <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
+            <h2 className="text-xl font-semibold text-slate-900">
+              {isEdit ? 'Edit Vaccine' : 'Add New Vaccine'}
             </h2>
-            <p className="text-sm text-slate-500">
-              Define vaccine information and dose schedules.
-              These schedules are used to automatically generate
-              child immunization records.
+            <p className="mt-1 text-sm text-slate-500">
+              Create custom vaccines with their own stock settings and dose schedule.
             </p>
           </div>
 
-          {/* BODY */}
-          <div className="px-6 py-6 space-y-6 max-h-[70vh] overflow-y-auto">
-
-            {/* BASIC INFO */}
-            <section className="rounded-2xl border p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-slate-800">
-                Basic Vaccine Information
+          <div className="max-h-[72vh] space-y-6 overflow-y-auto px-6 py-6">
+            <section className="rounded-[24px] border border-slate-200 p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Vaccine Details
               </h3>
 
-              <div>
-                <label className={label}>Vaccine Name</label>
-                <input
-                  className={input}
-                  value={form.name}
-                  onChange={e =>
-                    setForm({ ...form, name: e.target.value })
-                  }
-                />
-                <p className={guide}>
-                  Official or commonly used vaccine name.
-                  <br />
-                  Example: <b>BCG</b>, <b>Pentavalent</b>, <b>MMR</b>
-                </p>
-              </div>
-
-              <div>
-                <label className={label}>
-                  Recommended Age (Text)
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="block text-sm font-medium text-slate-700">
+                  Vaccine name *
+                  <input
+                    value={form.name}
+                    onChange={e => updateField('name', e.target.value)}
+                    className={inputClass}
+                  />
                 </label>
-                <input
-                  className={input}
-                  value={form.recommendedAge}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      recommendedAge: e.target.value,
-                    })
-                  }
-                />
-                <p className={guide}>
-                  Human-readable guidance shown to users.
-                  <br />
-                  Example: <b>At birth</b>, <b>6 weeks</b>, <b>9 months</b>
-                </p>
-              </div>
 
-              <div>
-                <label className={label}>
-                  Total Required Doses
+                <label className="block text-sm font-medium text-slate-700">
+                  Vaccine code
+                  <input
+                    value={form.code}
+                    onChange={e => updateField('code', e.target.value)}
+                    placeholder="Optional, auto-generated if blank"
+                    className={inputClass}
+                  />
                 </label>
-                <input
-                  type="number"
-                  className={input}
-                  value={form.totalDoses}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      totalDoses: Number(e.target.value) || '',
-                    })
-                  }
-                />
-                <p className={guide}>
-                  Total number of doses required to complete
-                  this vaccine (excluding boosters).
-                  <br />
-                  Example: <b>1</b>, <b>2</b>, <b>3</b>
-                </p>
-              </div>
 
-              <div>
-                <label className={label}>Description</label>
-                <textarea
-                  rows={2}
-                  className={input}
-                  value={form.description}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      description: e.target.value,
-                    })
-                  }
-                />
-                <p className={guide}>
-                  Short description of the disease(s) this
-                  vaccine prevents.
-                </p>
+                <label className="block text-sm font-medium text-slate-700">
+                  Recommended age *
+                  <input
+                    value={form.recommendedAge}
+                    onChange={e => updateField('recommendedAge', e.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700 sm:col-span-2 lg:col-span-3">
+                  Description
+                  <textarea
+                    rows={3}
+                    value={form.description}
+                    onChange={e => updateField('description', e.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Total doses
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.totalDoses}
+                    onChange={e => updateField('totalDoses', e.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Stock quantity *
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.stockQuantity}
+                    onChange={e => updateField('stockQuantity', e.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Reorder level *
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.reorderLevel}
+                    onChange={e => updateField('reorderLevel', e.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Unit
+                  <input
+                    value={form.unit}
+                    onChange={e => updateField('unit', e.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Display order
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.displayOrder}
+                    onChange={e => updateField('displayOrder', e.target.value)}
+                    placeholder="Optional"
+                    className={inputClass}
+                  />
+                </label>
               </div>
             </section>
 
-            {/* BOOSTER */}
-            <section className="rounded-2xl border p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-slate-800">
-                Booster Configuration
-              </h3>
+            <section className="rounded-[24px] border border-slate-200 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    Dose Schedule
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Add each dose with its timing so child records can be generated correctly.
+                  </p>
+                </div>
 
-              <p className={guide}>
-                Enable this only if the vaccine requires an
-                additional booster dose after completing
-                the primary doses.
-              </p>
-
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-600">
-                  Requires Booster Dose
-                </span>
                 <button
-                  onClick={() =>
-                    setForm({
-                      ...form,
-                      requiresBooster: !form.requiresBooster,
-                    })
-                  }
-                  className={`h-6 w-11 rounded-full relative ${
-                    form.requiresBooster
-                      ? 'bg-blue-600'
-                      : 'bg-slate-300'
-                  }`}
+                  type="button"
+                  onClick={addSchedule}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
                 >
-                  <span
-                    className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
-                      form.requiresBooster
-                        ? 'right-1'
-                        : 'left-1'
-                    }`}
-                  />
+                  <Plus className="h-4 w-4" />
+                  Add dose
                 </button>
               </div>
 
-              {form.requiresBooster && (
-                <div>
-                  <label className={label}>
-                    Booster After (Months)
-                  </label>
-                  <input
-                    type="number"
-                    className={input}
-                    value={form.boosterAfterMonths}
-                    onChange={e =>
-                      setForm({
-                        ...form,
-                        boosterAfterMonths:
-                          Number(e.target.value) || '',
-                      })
-                    }
-                  />
-                  <p className={guide}>
-                    Number of months after the final
-                    primary dose before giving the booster.
-                    <br />
-                    Example: <b>12</b> (booster after 1 year)
-                  </p>
-                </div>
-              )}
-            </section>
+              <div className="mt-4 space-y-4">
+                {form.schedules.map((schedule, index) => (
+                  <div key={`schedule-${index}`} className="rounded-[24px] bg-slate-50 p-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-slate-900">
+                        Schedule #{index + 1}
+                      </h4>
+                      {form.schedules.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => removeSchedule(index)}
+                          className="rounded-xl border border-slate-200 p-2 text-rose-600 transition hover:bg-rose-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      ) : null}
+                    </div>
 
-            {/* DOSE SCHEDULE */}
-            <section className="rounded-2xl border p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-slate-800">
-                Dose Schedule Rules
-              </h3>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <label className="block text-sm font-medium text-slate-700">
+                        Dose label *
+                        <input
+                          value={schedule.doseLabel}
+                          onChange={e => updateSchedule(index, 'doseLabel', e.target.value)}
+                          className={inputClass}
+                        />
+                      </label>
 
-              <p className={guide}>
-                Each schedule defines <b>one dose rule</b>.
-                The system uses these rules to automatically
-                generate immunization records for every child.
-              </p>
+                      <label className="block text-sm font-medium text-slate-700">
+                        Dose number *
+                        <input
+                          type="number"
+                          min={1}
+                          value={schedule.doseNumber}
+                          onChange={e => updateSchedule(index, 'doseNumber', e.target.value)}
+                          className={inputClass}
+                        />
+                      </label>
 
-              <button
-                onClick={addSchedule}
-                className="text-sm text-blue-600 font-medium"
-              >
-                + Add Dose Schedule
-              </button>
+                      <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+                        Recommended age label *
+                        <input
+                          value={schedule.recommendedAgeLabel}
+                          onChange={e =>
+                            updateSchedule(index, 'recommendedAgeLabel', e.target.value)
+                          }
+                          placeholder="Example: 6 months"
+                          className={inputClass}
+                        />
+                      </label>
 
-              {form.schedules.map((s, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border p-4 space-y-3"
-                >
-                  <div>
-                    <label className={label}>Dose Label</label>
-                    <input
-                      className={input}
-                      value={s.doseLabel}
-                      onChange={e =>
-                        updateSchedule(i, 'doseLabel', e.target.value)
-                      }
-                    />
-                    <p className={guide}>
-                      Display label for this dose.
-                      <br />
-                      Example: <b>1st Dose</b>, <b>2nd Dose</b>, <b>Booster</b>
-                    </p>
+                      <label className="block text-sm font-medium text-slate-700">
+                        Due after birth (days) *
+                        <input
+                          type="number"
+                          min={0}
+                          value={schedule.dueDaysFromBirth}
+                          onChange={e =>
+                            updateSchedule(index, 'dueDaysFromBirth', e.target.value)
+                          }
+                          className={inputClass}
+                        />
+                      </label>
+
+                      <label className="block text-sm font-medium text-slate-700">
+                        Interval days
+                        <input
+                          type="number"
+                          min={0}
+                          value={schedule.intervalDays}
+                          onChange={e => updateSchedule(index, 'intervalDays', e.target.value)}
+                          placeholder="Optional"
+                          className={inputClass}
+                        />
+                      </label>
+                    </div>
                   </div>
-
-                  <div>
-                    <label className={label}>Dose Number</label>
-                    <input
-                      type="number"
-                      className={input}
-                      value={s.doseNumber}
-                      onChange={e =>
-                        updateSchedule(
-                          i,
-                          'doseNumber',
-                          Number(e.target.value)
-                        )
-                      }
-                    />
-                    <p className={guide}>
-                      Order of the dose in the vaccine series.
-                      <br />
-                      Example: <b>1</b> = first dose, <b>2</b> = second
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className={label}>
-                      Recommended Age (Months)
-                    </label>
-                    <input
-                      type="number"
-                      className={input}
-                      value={s.recommendedAgeInMonths}
-                      onChange={e =>
-                        updateSchedule(
-                          i,
-                          'recommendedAgeInMonths',
-                          Number(e.target.value)
-                        )
-                      }
-                    />
-                    <p className={guide}>
-                      Age in months when this dose is due.
-                      <br />
-                      Example: <b>0</b> (birth), <b>6</b>, <b>9</b>
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className={label}>
-                      Interval After Previous Dose (Days)
-                    </label>
-                    <input
-                      type="number"
-                      className={input}
-                      value={s.intervalDays ?? ''}
-                      onChange={e =>
-                        updateSchedule(
-                          i,
-                          'intervalDays',
-                          Number(e.target.value) || ''
-                        )
-                      }
-                    />
-                    <p className={guide}>
-                      Number of days to wait after the previous dose.
-                      <br />
-                      Leave blank for the first dose.
-                      <br />
-                      Example: <b>28</b>, <b>30</b>, <b>60</b>
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => removeSchedule(i)}
-                    className="text-xs text-red-500"
-                  >
-                    Remove this dose
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </section>
           </div>
 
-          {/* FOOTER */}
-          <div className="px-6 py-4 border-t flex justify-end gap-3">
+          <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
             <button
+              type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border text-slate-600"
+              className="rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600"
             >
               Cancel
             </button>
             <button
-              onClick={handleSubmit}
+              type="button"
+              onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 text-white"
+              className="rounded-2xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {saving
-                ? 'Saving...'
-                : isEdit
-                ? 'Update Vaccine'
-                : 'Create Vaccine'}
+              {saving ? 'Saving...' : isEdit ? 'Save Vaccine' : 'Add Vaccine'}
             </button>
           </div>
         </div>
@@ -502,17 +485,14 @@ function UpsertVaccineModalContent({
       <AlertModal
         open={alert.open}
         type={alert.type}
+        title={alert.title}
         message={alert.message}
         onClose={() => {
-          setAlert(p => ({ ...p, open: false }));
-          if (alert.type === 'success') onClose();
+          const wasSuccessful = alert.type === 'success';
+          setAlert(current => ({ ...current, open: false }));
+          if (wasSuccessful) onClose();
         }}
       />
     </>
   );
-}
-
-/* ================= EXPORT ================= */
-export default function UpsertVaccineModal(props: Props) {
-  return <UpsertVaccineModalContent {...props} />;
 }

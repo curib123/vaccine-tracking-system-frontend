@@ -15,8 +15,9 @@ import api from '@/lib/api'; // ✅ Axios Bearer instance
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': 'Dashboard Overview',
   '/admin/children': 'Children Records',
-  '/admin/parents': 'Parent Management',
-  '/admin/immunization': 'Immunization',
+  '/admin/notifications': 'Notifications',
+  '/admin/parents': 'Children Records',
+  '/admin/immunization': 'Children Records',
   '/admin/due-immunizations': 'Due Immunizations',
   '/admin/vaccines': 'Vaccine Management',
   '/admin/user': 'User Management',

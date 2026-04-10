@@ -5,6 +5,7 @@ import { useState } from 'react';
 import {
   Baby,
   Bell,
+  BellRing,
   Home,
   LogOut,
   User,
@@ -16,6 +17,7 @@ import {
 } from 'next/navigation';
 
 import AlertModal from '@/components/modal/AlertModal';
+import useUnreadNotifications from '@/hooks/useUnreadNotifications';
 import api from '@/lib/api';
 
 /* ================= NAV LINKS ================= */
@@ -23,6 +25,7 @@ import api from '@/lib/api';
 const links = [
   { href: '/user/dashboard', label: 'Home', icon: Home },
   { href: '/user/announcements', label: 'Announcements', icon: Bell },
+  { href: '/user/notifications', label: 'Notifications', icon: BellRing },
   { href: '/user/children', label: 'Children', icon: Baby },
   { href: '/user/profile', label: 'Profile', icon: User },
 ];
@@ -32,6 +35,7 @@ const links = [
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
+  const unreadCount = useUnreadNotifications();
 
   const [alert, setAlert] = useState({
     open: false,
@@ -83,7 +87,7 @@ export default function Sidebar() {
       />
 
       {/* ================= SIDEBAR ================= */}
-      <aside className="flex h-full w-64 flex-col bg-white shadow-sm ring-1 ring-black/5">
+      <aside className="flex h-screen w-64 flex-col overflow-y-auto bg-white shadow-sm ring-1 ring-black/5">
         {/* Brand */}
         <div className="px-5 py-6">
           <h2 className="text-lg font-semibold tracking-tight text-slate-900">
@@ -123,8 +127,14 @@ export default function Sidebar() {
                 />
                 {l.label}
 
+                {l.href === '/user/notifications' && unreadCount > 0 ? (
+                  <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold text-slate-900">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                ) : null}
+
                 {/* Active Indicator */}
-                {active && (
+                {active && l.href !== '/user/notifications' && (
                   <span className="ml-auto h-2 w-2 rounded-full bg-blue-500" />
                 )}
               </Link>

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import {
   Baby,
   Bell,
+  BellRing,
   Home,
   LogOut,
   User,
@@ -17,6 +18,7 @@ import {
 } from 'next/navigation';
 
 import AlertModal from '@/components/modal/AlertModal';
+import useUnreadNotifications from '@/hooks/useUnreadNotifications';
 import api from '@/lib/api';
 
 /* ================= COMPONENT ================= */
@@ -30,6 +32,7 @@ export default function Drawer({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const unreadCount = useUnreadNotifications();
 
   const [alert, setAlert] = useState({
     open: false,
@@ -129,6 +132,14 @@ export default function Drawer({
                 onClick={onClose}
               />
               <DrawerLink
+                href="/user/notifications"
+                icon={BellRing}
+                label="Notifications"
+                active={pathname === '/user/notifications'}
+                badge={unreadCount}
+                onClick={onClose}
+              />
+              <DrawerLink
                 href="/user/children"
                 icon={Baby}
                 label="Children"
@@ -177,12 +188,14 @@ function DrawerLink({
   icon: Icon,
   label,
   active,
+  badge,
   onClick,
 }: {
   href: string;
   icon: any;
   label: string;
   active?: boolean;
+  badge?: number;
   onClick?: () => void;
 }) {
   return (
@@ -209,7 +222,13 @@ function DrawerLink({
       />
       {label}
 
-      {active && (
+      {badge && badge > 0 ? (
+        <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold text-slate-900">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      ) : null}
+
+      {active && !badge && (
         <span className="ml-auto h-2 w-2 rounded-full bg-blue-500" />
       )}
     </Link>
