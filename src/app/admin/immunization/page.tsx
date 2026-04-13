@@ -13,7 +13,7 @@ function LegacyImmunizationRedirect() {
 
   useEffect(() => {
     const query = searchParams.toString();
-    router.replace(query ? `/admin/children?${query}` : '/admin/children');
+    router.replace(query ? `/admin/child-records?${query}` : '/admin/child-records');
   }, [router, searchParams]);
 
   return <TablePageSkeleton columns={4} rows={4} showHeaderAction={false} />;

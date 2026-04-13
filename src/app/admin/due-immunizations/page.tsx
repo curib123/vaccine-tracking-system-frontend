@@ -144,12 +144,12 @@ function DueImmunizationsContent() {
   return (
     <>
       <div className="space-y-6">
-        <header className="rounded-[32px] bg-white p-6 shadow-sm ring-1 ring-black/5">
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Action Queue</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+        <header className="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_52%,#7dd3fc_100%)] px-6 py-7 text-white shadow-sm">
+          <p className="text-sm uppercase tracking-[0.24em] text-white/70">Action Queue</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
             Due immunizations
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-500">
+          <p className="mt-2 max-w-2xl text-sm text-white/80">
             Update vaccine records directly from the due queue. Visit creation has been removed to keep the immunization workflow simple.
           </p>
         </header>
@@ -250,7 +250,7 @@ function DueImmunizationsContent() {
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => router.push(`/admin/children?childId=${record.child.id}`)}
+                          onClick={() => router.push(`/admin/child-records?childId=${record.child.id}`)}
                           className="rounded-lg border p-2 text-slate-700 transition hover:bg-slate-50"
                           title="Open Child Card"
                           aria-label="Open Child Card"

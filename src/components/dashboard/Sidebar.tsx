@@ -1,10 +1,10 @@
 'use client';
 
 import {
-  useEffect,
   useState,
 } from 'react';
 
+import axios from 'axios';
 import {
   Baby,
   Bell,
@@ -15,6 +15,7 @@ import {
   Speaker,
   Syringe,
   UserCog,
+  Users,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -73,6 +74,12 @@ const links = [
   },
   {
     href: '/admin/children',
+    label: 'Parent Records',
+    icon: Users,
+    required: PermissionCode.MANAGE_CHILDREN,
+  },
+  {
+    href: '/admin/child-records',
     label: 'Children Records',
     icon: Baby,
     required: PermissionCode.MANAGE_CHILDREN,
@@ -115,22 +122,24 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const unreadCount = useUnreadNotifications();
 
   /* ================= PERMISSION STATE ================= */
-  const [permissionSet, setPermissionSet] =
-    useState<Set<string>>(new Set());
+  const [permissionSet] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') {
+      return new Set();
+    }
 
-  useEffect(() => {
     const raw = sessionStorage.getItem('user');
-    if (!raw) return;
+    if (!raw) {
+      return new Set();
+    }
 
     try {
       const user: UserSession = JSON.parse(raw);
-      const perms =
-        user.permissions?.map(p => p.code) || [];
-      setPermissionSet(new Set(perms));
+      const perms = user.permissions?.map(p => p.code) || [];
+      return new Set(perms);
     } catch {
-      // ignore malformed session
+      return new Set();
     }
-  }, []);
+  });
 
   /* ================= ALERT STATE ================= */
   const [alert, setAlert] = useState({
@@ -149,12 +158,16 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         type: 'success',
         message: res.data?.message || 'Logout successful',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message
+        : undefined;
+
       setAlert({
         open: true,
         type: 'error',
         message:
-          error?.response?.data?.message ||
+          errorMessage ||
           'Logout failed. Please try again.',
       });
     }

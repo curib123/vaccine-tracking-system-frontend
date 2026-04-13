@@ -6,7 +6,10 @@ import {
   useState,
 } from 'react';
 
+import axios from 'axios';
+
 import AlertModal from '@/components/modal/AlertModal';
+import useDebouncedValue from '@/hooks/useDebouncedValue';
 import api from '@/lib/api';
 
 /* ================= TYPES ================= */
@@ -39,10 +42,14 @@ export default function GenerateVaccineModal({
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [vaccineIds, setVaccineIds] = useState<number[]>([]);
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query.trim());
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadingVaccines, setLoadingVaccines] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const loading = submitting;
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const latestRequestRef = useRef(0);
 
   const [alert, setAlert] = useState({
     open: false,
@@ -65,33 +72,48 @@ export default function GenerateVaccineModal({
   useEffect(() => {
     if (!open || !childId) return;
 
+    const requestId = ++latestRequestRef.current;
+    setLoadingVaccines(true);
+
     api
       .get('/vaccine/getAllVaccines', {
         params: {
           childId,
           limit: 20,
-          search: query,
+          search: debouncedQuery,
           sortBy: 'name',
           sortOrder: 'asc',
         },
       })
-      .then(res => setVaccines(res.data.data || []))
-      .catch(() =>
+      .then(res => {
+        if (requestId !== latestRequestRef.current) return;
+        setVaccines(res.data.data || []);
+      })
+      .catch(() => {
+        if (requestId !== latestRequestRef.current) return;
+
         setAlert({
           open: true,
           type: 'error',
           message: 'Failed to load vaccines',
-        })
-      );
-  }, [open, query, childId]);
+        });
+      })
+      .finally(() => {
+        if (requestId === latestRequestRef.current) {
+          setLoadingVaccines(false);
+        }
+      });
+  }, [childId, debouncedQuery, open]);
 
   /* ================= RESET ================= */
   useEffect(() => {
     if (!open) {
+      latestRequestRef.current += 1;
       setVaccines([]);
       setVaccineIds([]);
       setQuery('');
       setDropdownOpen(false);
+      setLoadingVaccines(false);
     }
   }, [open]);
 
@@ -115,7 +137,7 @@ export default function GenerateVaccineModal({
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       await api.post('/records/generate/by-vaccines', {
         childId,
@@ -129,16 +151,20 @@ export default function GenerateVaccineModal({
       });
 
       onGenerated();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = axios.isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message
+        : undefined;
+
       setAlert({
         open: true,
         type: 'error',
         message:
-          err?.response?.data?.message ||
+          errorMessage ||
           'Failed to add vaccine records',
       });
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -187,9 +213,17 @@ export default function GenerateVaccineModal({
                   className={`${inputClass} mt-1`}
                 />
 
-                {dropdownOpen && vaccines.length > 0 && (
+                {dropdownOpen && (
                   <div className="absolute z-20 mt-1 w-full max-h-60 overflow-auto rounded-xl border bg-white shadow">
-                    {vaccines.map(v => {
+                    {loadingVaccines ? (
+                      <div className="px-4 py-3 text-sm text-slate-500">
+                        Loading vaccines...
+                      </div>
+                    ) : vaccines.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-slate-500">
+                        No vaccines found.
+                      </div>
+                    ) : vaccines.map(v => {
                       const selected = vaccineIds.includes(v.id);
 
                       return (
@@ -234,7 +268,7 @@ export default function GenerateVaccineModal({
               </button>
               <button
                 onClick={handleGenerate}
-                disabled={loading}
+                disabled={submitting}
                 className="px-5 py-2 rounded-xl bg-blue-600 text-white disabled:opacity-60"
               >
                 {loading ? 'Processing…' : 'Add Records'}

@@ -1,23 +1,32 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import AuthGuard from '@/components/guards/AuthGuard';
-import ChildImmunizationRecordModal, {
-  ChildRecordItem,
-} from '@/components/immunization/ChildImmunizationRecordModal';
+import type { ChildRecordItem } from '@/components/immunization/ChildImmunizationRecordModal';
 import {
   CardRow,
   ChildDetails,
   ImmunizationSummary,
 } from '@/components/immunization/ChildImmunizationCard';
 import AlertModal from '@/components/modal/AlertModal';
-import UpsertChildModal from '@/components/modal/UpsertChildModal';
 import { TablePageSkeleton } from '@/components/ui/Shimmer';
+import useDebouncedValue from '@/hooks/useDebouncedValue';
 import api from '@/lib/api';
+
+const ChildImmunizationRecordModal = dynamic(
+  () => import('@/components/immunization/ChildImmunizationRecordModal'),
+  { ssr: false }
+);
+
+const UpsertChildModal = dynamic(
+  () => import('@/components/modal/UpsertChildModal'),
+  { ssr: false }
+);
 
 type Parent = {
   id: number;
@@ -100,6 +109,7 @@ function ChildrenPageContent() {
   });
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim());
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedParentForCreate, setSelectedParentForCreate] = useState<Parent | null>(null);
@@ -107,6 +117,9 @@ function ChildrenPageContent() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+  const latestRequestRef = useRef(0);
+  const hasLoadedRef = useRef(false);
 
   const syncChildQuery = useCallback(
     (childId: number | null) => {
@@ -124,9 +137,15 @@ function ChildrenPageContent() {
     [router, searchParams]
   );
 
-  const fetchParents = useCallback(async (page: number) => {
+  const fetchParents = useCallback(async (page: number, preserveContent = hasLoadedRef.current) => {
+    const requestId = ++latestRequestRef.current;
+
     try {
-      setLoading(true);
+      if (preserveContent) {
+        setIsFetching(true);
+      } else {
+        setLoading(true);
+      }
 
       const params: Record<string, string | number> = {
         page,
@@ -135,7 +154,7 @@ function ChildrenPageContent() {
         sortOrder: 'desc',
       };
 
-      if (search) params.search = search;
+      if (debouncedSearch) params.search = debouncedSearch;
 
       const { data } = await api.get('/parent/getAllParents', { params });
       const parentList = data.data || [];
@@ -158,11 +177,19 @@ function ChildrenPageContent() {
         })
       );
 
+      if (requestId !== latestRequestRef.current) {
+        return;
+      }
+
       setChildrenByParent(Object.fromEntries(childEntries));
+      hasLoadedRef.current = true;
     } finally {
-      setLoading(false);
+      if (requestId === latestRequestRef.current) {
+        setLoading(false);
+        setIsFetching(false);
+      }
     }
-  }, [pagination.limit, search]);
+  }, [debouncedSearch, pagination.limit]);
 
   const loadCard = useCallback(async (childId: number) => {
     try {
@@ -207,7 +234,7 @@ function ChildrenPageContent() {
   };
 
   const reload = async () => {
-    await fetchParents(pagination.page);
+    await fetchParents(pagination.page, true);
 
     if (recordModalOpen && selectedChildId) {
       await loadCard(selectedChildId);
@@ -240,7 +267,7 @@ function ChildrenPageContent() {
 
   return (
     <div className="space-y-8 bg-[#f6f8fb] px-4 py-6 md:px-6">
-      <header className="rounded-[32px] bg-[linear-gradient(135deg,#0f5b63_0%,#167a76_52%,#f6c94c_100%)] px-6 py-7 text-white shadow-sm">
+      <header className="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_52%,#7dd3fc_100%)] px-6 py-7 text-white shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.28em] text-white/70">Family Registry</p>
@@ -256,7 +283,7 @@ function ChildrenPageContent() {
               setSelectedParentForCreate(null);
               setModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#0f5b63] shadow-sm"
+            className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#1d4ed8] shadow-sm"
           >
             <Plus className="h-4 w-4" />
             Register Child
@@ -272,6 +299,9 @@ function ChildrenPageContent() {
               {parents.length} parent{parents.length === 1 ? '' : 's'} on this page • {totalChildrenOnPage} child
               {totalChildrenOnPage === 1 ? '' : 'ren'} listed
             </p>
+            {isFetching && (
+              <p className="mt-1 text-xs font-medium text-sky-600">Updating results...</p>
+            )}
           </div>
 
           <input
@@ -308,7 +338,7 @@ function ChildrenPageContent() {
 
                       <div className="rounded-2xl bg-white px-4 py-3 text-right ring-1 ring-slate-200">
                         <div className="text-[11px] uppercase tracking-[0.22em] text-slate-400">Children</div>
-                        <div className="mt-1 text-2xl font-semibold text-[#0f5b63]">{children.length}</div>
+                        <div className="mt-1 text-2xl font-semibold text-[#1d4ed8]">{children.length}</div>
                       </div>
                     </div>
 
@@ -320,7 +350,7 @@ function ChildrenPageContent() {
                           setSelectedParentForCreate(parent);
                           setModalOpen(true);
                         }}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-[#0f5b63] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4d54]"
+                        className="inline-flex items-center gap-2 rounded-2xl bg-[#1d4ed8] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
                       >
                         <Plus className="h-4 w-4" />
                         Add child
@@ -342,7 +372,7 @@ function ChildrenPageContent() {
                             key={child.id}
                             className={`rounded-[22px] border px-4 py-4 transition ${
                               selected
-                                ? 'border-[#0f5b63] bg-[#0f5b63]/[0.04]'
+                                ? 'border-[#1d4ed8] bg-[#1d4ed8]/[0.04]'
                                 : 'border-slate-200 bg-white hover:border-sky-200'
                             }`}
                           >
@@ -415,14 +445,14 @@ function ChildrenPageContent() {
           <div className="flex gap-2">
             <button
               disabled={pagination.page === 1}
-              onClick={() => fetchParents(pagination.page - 1)}
+              onClick={() => fetchParents(pagination.page - 1, true)}
               className="rounded-xl bg-slate-100 px-3 py-2 disabled:opacity-40"
             >
               Previous
             </button>
             <button
               disabled={pagination.page === pagination.totalPages}
-              onClick={() => fetchParents(pagination.page + 1)}
+              onClick={() => fetchParents(pagination.page + 1, true)}
               className="rounded-xl bg-slate-100 px-3 py-2 disabled:opacity-40"
             >
               Next

@@ -145,7 +145,7 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-8 bg-[#f6f8fb] px-4 py-6 md:px-6">
-      <header className="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#0f5b63_50%,#f6c94c_100%)] px-6 py-7 text-white shadow-sm">
+      <header className="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_52%,#7dd3fc_100%)] px-6 py-7 text-white shadow-sm">
         <p className="text-sm uppercase tracking-[0.28em] text-white/70">
           Overview Analytics
         </p>

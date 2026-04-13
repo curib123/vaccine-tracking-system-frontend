@@ -1,5 +1,6 @@
 'use client';
 
+import axios from 'axios';
 import {
   LogOut,
   Menu,
@@ -14,9 +15,10 @@ import api from '@/lib/api'; // ✅ Axios Bearer instance
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': 'Dashboard Overview',
-  '/admin/children': 'Children Records',
+  '/admin/children': 'Parent Records',
+  '/admin/child-records': 'Children Records',
   '/admin/notifications': 'Notifications',
-  '/admin/parents': 'Children Records',
+  '/admin/parents': 'Parent Records',
   '/admin/immunization': 'Children Records',
   '/admin/due-immunizations': 'Due Immunizations',
   '/admin/vaccines': 'Vaccine Management',
@@ -27,10 +29,13 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function Topbar({
   user,
-  collapsed,
   onToggle,
 }: {
-  user: any;
+  user: {
+    firstName?: string;
+    lastName?: string;
+    roleName?: string;
+  } | null;
   collapsed: boolean;
   onToggle: () => void;
 }) {
@@ -54,8 +59,12 @@ export default function Topbar({
       sessionStorage.clear(); // remove JWT
       localStorage.clear();
       router.replace('/login');
-    } catch (err) {
-      console.error('Logout failed', err);
+    } catch (error: unknown) {
+      const details = axios.isAxiosError(error)
+        ? error.response?.data || error.message
+        : error;
+
+      console.error('Logout failed', details);
     }
   };
 

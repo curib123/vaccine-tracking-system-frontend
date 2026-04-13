@@ -114,26 +114,31 @@ export default function AnnouncementPage() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-8 bg-[#f6f8fb] px-4 py-6 md:px-6">
         {/* HEADER */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Announcements
-            </h1>
-            <p className="text-sm text-gray-500">Manage system announcements</p>
-          </div>
+        <header className="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_52%,#7dd3fc_100%)] px-6 py-7 text-white shadow-sm">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.28em] text-white/70">
+                Public Updates
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+                Announcements
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-white/80">Manage system announcements</p>
+            </div>
 
-          <button
-            onClick={() => {
-              setSelectedId(null);
-              setOpenUpsert(true);
-            }}
-            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            + Create Announcement
-          </button>
-        </div>
+            <button
+              onClick={() => {
+                setSelectedId(null);
+                setOpenUpsert(true);
+              }}
+              className="rounded-xl bg-white px-5 py-2.5 text-sm font-medium text-[#1d4ed8] shadow-sm"
+            >
+              + Create Announcement
+            </button>
+          </div>
+        </header>
 
         {/* TABLE */}
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">

@@ -1,16 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Pencil, Plus, Shield, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
 
 import AuthGuard from "@/components/guards/AuthGuard";
 import AlertModal from "@/components/modal/AlertModal";
-import UpsertUserModal from "@/components/modal/UpsertUserModal";
-import UserPermissionModal from "@/components/modal/UserPermissionModal";
 import { TablePageSkeleton } from "@/components/ui/Shimmer";
+import useDebouncedValue from "@/hooks/useDebouncedValue";
 import useSessionGuard from "@/hooks/useSessionGuard";
 import api from "@/lib/api";
+
+const UpsertUserModal = dynamic(
+  () => import("@/components/modal/UpsertUserModal"),
+  { ssr: false }
+);
+
+const UserPermissionModal = dynamic(
+  () => import("@/components/modal/UserPermissionModal"),
+  { ssr: false }
+);
 
 type User = {
   id: number;
@@ -74,6 +84,7 @@ function UsersPageContent() {
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [activeRoleTab, setActiveRoleTab] = useState(ALL_ROLES_TAB);
+  const debouncedSearch = useDebouncedValue(search.trim());
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -84,15 +95,19 @@ function UsersPageContent() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertUserId, setAlertUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+  const latestRequestRef = useRef(0);
+  const hasLoadedRef = useRef(false);
 
-  useEffect(() => {
-    fetchUsers(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, isActive, sortBy, sortOrder]);
+  const fetchUsers = useCallback(async (page: number, preserveContent = hasLoadedRef.current) => {
+    const requestId = ++latestRequestRef.current;
 
-  const fetchUsers = async (page: number) => {
     try {
-      setLoading(true);
+      if (preserveContent) {
+        setIsFetching(true);
+      } else {
+        setLoading(true);
+      }
 
       const params: Record<string, string | number> = {
         page,
@@ -101,19 +116,31 @@ function UsersPageContent() {
         sortOrder,
       };
 
-      if (search) params.search = search;
+      if (debouncedSearch) params.search = debouncedSearch;
       if (isActive !== "") params.isActive = isActive;
 
       const { data } = await api.get("/user/getAllUsers", { params });
 
+      if (requestId !== latestRequestRef.current) {
+        return;
+      }
+
       setUsers(data.data || []);
       setPagination(data.pagination);
+      hasLoadedRef.current = true;
     } finally {
-      setLoading(false);
+      if (requestId === latestRequestRef.current) {
+        setLoading(false);
+        setIsFetching(false);
+      }
     }
-  };
+  }, [debouncedSearch, isActive, pagination.limit, sortBy, sortOrder]);
 
-  const reload = () => fetchUsers(pagination.page);
+  useEffect(() => {
+    fetchUsers(1);
+  }, [fetchUsers]);
+
+  const reload = () => fetchUsers(pagination.page, true);
 
   const currentUser = useMemo(
     () => users.find((u) => u.id === sessionUser?.id),
@@ -211,6 +238,11 @@ function UsersPageContent() {
             <p className="text-sm text-slate-500">
               Search, narrow by status, and sort the current user page.
             </p>
+            {isFetching && (
+              <p className="mt-1 text-xs font-medium text-sky-600">
+                Updating results...
+              </p>
+            )}
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
@@ -413,14 +445,14 @@ function UsersPageContent() {
           <div className="flex gap-2">
             <button
               disabled={pagination.page === 1}
-              onClick={() => fetchUsers(pagination.page - 1)}
+              onClick={() => fetchUsers(pagination.page - 1, true)}
               className="rounded-xl bg-slate-100 px-4 py-2 transition hover:bg-slate-200 disabled:opacity-40"
             >
               Previous
             </button>
             <button
               disabled={pagination.page === pagination.totalPages}
-              onClick={() => fetchUsers(pagination.page + 1)}
+              onClick={() => fetchUsers(pagination.page + 1, true)}
               className="rounded-xl bg-slate-100 px-4 py-2 transition hover:bg-slate-200 disabled:opacity-40"
             >
               Next

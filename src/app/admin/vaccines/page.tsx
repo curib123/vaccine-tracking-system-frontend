@@ -60,14 +60,14 @@ function VaccinePageContent() {
 
   return (
     <div className="space-y-8 bg-[#f6f8fb] px-4 py-6 md:px-6">
-      <header className="rounded-[32px] bg-white p-6 shadow-sm ring-1 ring-black/5">
+      <header className="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_52%,#7dd3fc_100%)] px-6 py-7 text-white shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Vaccine Catalog</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+            <p className="text-sm uppercase tracking-[0.24em] text-white/70">Vaccine Catalog</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
               Vaccine management
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+            <p className="mt-2 max-w-2xl text-sm text-white/80">
               Add custom vaccines, manage stock, monitor low inventory, and review the full dose timing used for schedule generation.
             </p>
           </div>
@@ -78,7 +78,7 @@ function VaccinePageContent() {
               setSelectedId(null);
               setModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+            className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#1d4ed8] shadow-sm"
           >
             <Plus className="h-4 w-4" />
             Add New Vaccine
@@ -119,7 +119,11 @@ function VaccinePageContent() {
 
               <div className="mt-6 grid gap-4 sm:grid-cols-3">
                 <Stat label="Recommended" value={vaccine.recommendedAge} />
-                <Stat label="Stock" value={`${vaccine.stockQuantity} ${vaccine.unit}${vaccine.stockQuantity === 1 ? '' : 's'}`} />
+                <Stat
+                  label="Stock"
+                  value={`${vaccine.stockQuantity} ${vaccine.unit}${vaccine.stockQuantity === 1 ? '' : 's'}`}
+                  danger={lowStock}
+                />
                 <Stat
                   label="Alert Level"
                   value={lowStock ? `Low at ${vaccine.reorderLevel}` : `Reorder at ${vaccine.reorderLevel}`}
