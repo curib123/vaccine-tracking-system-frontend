@@ -14,11 +14,14 @@ import UpdateRecordStatusModal from '@/components/modal/UpdateRecordStatusModal'
 export type ChildRecordItem = {
   id: number;
   dose: string;
+  doseNumber?: number | null;
   scheduleLabel?: string | null;
   status: string;
   nextDueDate?: string | null;
   dateGiven?: string | null;
   remarks?: string | null;
+  isLate?: boolean;
+  isMissed?: boolean;
   vaccine: {
     name: string;
   };
@@ -106,6 +109,51 @@ export default function ChildImmunizationRecordModal({
       return true;
     });
   }, [grouped.pending]);
+
+  const timelineItems = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return records
+      .map(record => {
+        const dueDate = record.nextDueDate ? new Date(record.nextDueDate) : null;
+        const givenDate = record.dateGiven ? new Date(record.dateGiven) : null;
+        const status = String(record.status || '').toUpperCase();
+        const isCompleted = status === 'COMPLETED';
+        const isPending = status === 'PENDING';
+        const isAttentionNeeded =
+          Boolean(record.isMissed) ||
+          status === 'SKIPPED' ||
+          status === 'CANCELLED' ||
+          Boolean(record.isLate) ||
+          (isPending && dueDate ? dueDate.getTime() < today.getTime() : false);
+        const sortDate = givenDate ?? dueDate;
+
+        return {
+          ...record,
+          status,
+          dueDate,
+          givenDate,
+          sortTime: sortDate ? sortDate.getTime() : Number.MAX_SAFE_INTEGER,
+          isCompleted,
+          isPending,
+          isAttentionNeeded,
+        };
+      })
+      .sort((left, right) => {
+        if (left.sortTime !== right.sortTime) {
+          return left.sortTime - right.sortTime;
+        }
+
+        const vaccineDiff = left.vaccine.name.localeCompare(right.vaccine.name);
+
+        if (vaccineDiff !== 0) {
+          return vaccineDiff;
+        }
+
+        return (left.doseNumber ?? left.id) - (right.doseNumber ?? right.id);
+      });
+  }, [records]);
 
   if (!open) return null;
 
@@ -205,7 +253,10 @@ export default function ChildImmunizationRecordModal({
                   child={child}
                   summary={summary}
                   cardRows={cardRows}
+                  showLowStockBadge={false}
                 />
+
+                <ImmunizationTimeline records={timelineItems} />
 
                 <div className="grid gap-6 lg:grid-cols-2">
                   <RecordPanel
@@ -242,6 +293,195 @@ export default function ChildImmunizationRecordModal({
       />
     </>
   );
+}
+
+function ImmunizationTimeline({
+  records,
+}: {
+  records: Array<
+    ChildRecordItem & {
+      status: string;
+      dueDate: Date | null;
+      givenDate: Date | null;
+      sortTime: number;
+      isCompleted: boolean;
+      isPending: boolean;
+      isAttentionNeeded: boolean;
+    }
+  >;
+}) {
+  return (
+    <section className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">Tracking timeline</h3>
+          <p className="text-sm text-slate-500">
+            Follow each dose by due date and see what was completed, what is upcoming, and what needs attention.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+          <LegendPill label="Completed" tone="emerald" />
+          <LegendPill label="Upcoming" tone="sky" />
+          <LegendPill label="Needs attention" tone="rose" />
+        </div>
+      </div>
+
+      <div className="mt-5">
+        {records.length === 0 ? (
+          <div className="rounded-2xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            No timeline entries yet.
+          </div>
+        ) : (
+          <div className="space-y-0">
+            {records.map((record, index) => {
+              const toneClasses = record.isCompleted
+                ? {
+                    dot: 'bg-emerald-500 ring-emerald-100',
+                    badge: 'bg-emerald-100 text-emerald-700',
+                    border: 'border-emerald-100',
+                  }
+                : record.isAttentionNeeded
+                  ? {
+                      dot: 'bg-rose-500 ring-rose-100',
+                      badge: 'bg-rose-100 text-rose-700',
+                      border: 'border-rose-100',
+                    }
+                  : {
+                      dot: 'bg-sky-500 ring-sky-100',
+                      badge: 'bg-sky-100 text-sky-700',
+                      border: 'border-sky-100',
+                    };
+
+              const primaryDateLabel = record.givenDate ? 'Given' : 'Due';
+              const primaryDateValue = record.givenDate ?? record.dueDate;
+              const detailBadges = [
+                record.scheduleLabel,
+                record.isLate ? 'Late' : null,
+                record.isMissed ? 'Missed' : null,
+              ].filter(Boolean);
+
+              return (
+                <div key={record.id} className="grid grid-cols-[22px_1fr] gap-3">
+                  <div className="flex flex-col items-center">
+                    <span
+                      className={`mt-2 h-3 w-3 rounded-full ring-4 ${toneClasses.dot}`}
+                    />
+                    {index < records.length - 1 ? (
+                      <span className="mt-1 h-full w-px bg-slate-200" />
+                    ) : null}
+                  </div>
+
+                  <article
+                    className={`mb-4 rounded-2xl border bg-slate-50 px-4 py-3 ${toneClasses.border}`}
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="font-semibold text-slate-900">
+                            {record.vaccine.name}
+                            {record.doseNumber ? ` - Dose ${record.doseNumber}` : ''}
+                          </h4>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${toneClasses.badge}`}
+                          >
+                            {record.status}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-sm text-slate-600">
+                          {record.dose}
+                          {record.scheduleLabel ? ` - ${record.scheduleLabel}` : ''}
+                        </p>
+
+                        {detailBadges.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {detailBadges.map(detail => (
+                              <span
+                                key={`${record.id}-${detail}`}
+                                className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200"
+                              >
+                                {detail}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-slate-200 md:min-w-[150px]">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          {primaryDateLabel}
+                        </div>
+                        <div className="mt-1 font-semibold text-slate-900">
+                          {primaryDateValue
+                            ? primaryDateValue.toLocaleDateString()
+                            : 'Date pending'}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Target: {record.dueDate ? record.dueDate.toLocaleDateString() : 'TBD'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="mt-3 text-sm text-slate-600">
+                      {record.remarks || fallbackTimelineRemark(record)}
+                    </p>
+                  </article>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function LegendPill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'emerald' | 'sky' | 'rose';
+}) {
+  const classes = {
+    emerald: 'bg-emerald-100 text-emerald-700',
+    sky: 'bg-sky-100 text-sky-700',
+    rose: 'bg-rose-100 text-rose-700',
+  };
+
+  return <span className={`rounded-full px-3 py-1 ${classes[tone]}`}>{label}</span>;
+}
+
+function fallbackTimelineRemark(record: {
+  status: string;
+  givenDate: Date | null;
+  dueDate: Date | null;
+  isLate?: boolean;
+  isMissed?: boolean;
+}) {
+  if (record.status === 'COMPLETED') {
+    return record.isLate
+      ? 'Completed after the target schedule.'
+      : 'Completed within the tracking record.';
+  }
+
+  if (record.status === 'PENDING') {
+    if (record.dueDate && record.dueDate.getTime() < Date.now()) {
+      return 'Still pending past the target schedule.';
+    }
+
+    return 'Scheduled and waiting for the next vaccine date.';
+  }
+
+  if (record.isMissed || record.status === 'SKIPPED') {
+    return 'Marked as missed in the child record.';
+  }
+
+  if (record.status === 'CANCELLED') {
+    return 'Cancelled in the child record.';
+  }
+
+  return 'Tracking update recorded.';
 }
 
 function RecordPanel({

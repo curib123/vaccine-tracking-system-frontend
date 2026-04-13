@@ -61,6 +61,7 @@ type Props = {
   summary: ImmunizationSummary;
   cardRows: CardRow[];
   compact?: boolean;
+  showLowStockBadge?: boolean;
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-PH', {
@@ -97,6 +98,7 @@ export default function ChildImmunizationCard({
   summary,
   cardRows,
   compact = false,
+  showLowStockBadge = true,
 }: Props) {
   if (!child) {
     return (
@@ -185,7 +187,8 @@ export default function ChildImmunizationCard({
                   <td className="px-4 py-4 font-medium text-slate-900">
                     <p>{row.vaccineName}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {(row.reorderLevel ?? -1) >= 0 &&
+                      {showLowStockBadge &&
+                      (row.reorderLevel ?? -1) >= 0 &&
                       (row.stockQuantity ?? 0) <= (row.reorderLevel ?? 0) ? (
                         <span className="rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700">
                           Low stock
