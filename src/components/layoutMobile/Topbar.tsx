@@ -8,7 +8,7 @@ export default function Topbar({
   onMenu: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30">
+    <header className="sticky top-0 z-30 pt-[env(safe-area-inset-top)]">
       <div className="flex h-14 items-center gap-3 bg-white/90 px-4 backdrop-blur shadow-sm ring-1 ring-black/5">
         {/* Menu Button */}
         <button

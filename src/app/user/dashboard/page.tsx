@@ -3,14 +3,17 @@
 import {
   useEffect,
   useState,
+  useSyncExternalStore,
 } from 'react';
 
 import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  Download,
   LucideIcon,
   Percent,
+  Share,
   Users,
 } from 'lucide-react';
 
@@ -56,6 +59,7 @@ export default function ParentDashboardPage() {
 ===================================================== */
 
 function ParentDashboardContent() {
+  const isInstalled = useStandaloneMode();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [user] = useState<SessionUser | null>(() => {
@@ -126,6 +130,39 @@ function ParentDashboardContent() {
         {/* Decorative blur */}
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
       </header>
+
+      {!isInstalled ? (
+        <section className="mb-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
+              <Download className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-slate-900">
+                Install this app
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Save ImmuniTrack to your home screen for faster access and a more
+                app-like experience.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <InstallHintCard
+              title="Android"
+              steps="Tap Install app when prompted, or open the browser menu and choose Add to Home screen."
+              icon={Download}
+            />
+            <InstallHintCard
+              title="iPhone or iPad"
+              steps="Tap Share, then choose Add to Home Screen in Safari."
+              icon={Share}
+            />
+          </div>
+        </section>
+      ) : null}
 
       {/* ================= DASHBOARD ================= */}
       {loading ? (
@@ -239,4 +276,75 @@ function StatCard({
 
 function SkeletonList() {
   return <CardListSkeleton count={5} />;
+}
+
+function useStandaloneMode() {
+  return useSyncExternalStore(
+    subscribeToStandaloneMode,
+    getStandaloneSnapshot,
+    () => false
+  );
+}
+
+function subscribeToStandaloneMode(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  const mediaQuery = window.matchMedia('(display-mode: standalone)');
+  const notify = () => onStoreChange();
+
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', notify);
+  } else {
+    mediaQuery.addListener(notify);
+  }
+
+  window.addEventListener('appinstalled', notify);
+  window.addEventListener('pageshow', notify);
+
+  return () => {
+    if (typeof mediaQuery.removeEventListener === 'function') {
+      mediaQuery.removeEventListener('change', notify);
+    } else {
+      mediaQuery.removeListener(notify);
+    }
+
+    window.removeEventListener('appinstalled', notify);
+    window.removeEventListener('pageshow', notify);
+  };
+}
+
+function getStandaloneSnapshot() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+function InstallHintCard({
+  title,
+  steps,
+  icon: Icon,
+}: {
+  title: string;
+  steps: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200/70">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200">
+          <Icon className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      </div>
+
+      <p className="mt-3 text-sm leading-6 text-slate-600">{steps}</p>
+    </div>
+  );
 }

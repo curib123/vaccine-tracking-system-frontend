@@ -29,7 +29,7 @@ export default function BottomNav() {
   const unreadCount = useUnreadNotifications();
 
   return (
-    <nav className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-3xl bg-white/95 shadow-lg ring-1 ring-black/5 backdrop-blur">
+    <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-3xl bg-white/95 shadow-lg ring-1 ring-black/5 backdrop-blur">
       <div className="flex h-16 items-center justify-around">
         {items.map(i => {
           const active = path === i.href;
