@@ -7,6 +7,7 @@ import {
 import axios from 'axios';
 import {
   Baby,
+  ChartColumnBig,
   Bell,
   CalendarRange,
   LayoutDashboard,
@@ -93,6 +94,12 @@ const links = [
     href: '/admin/due-immunizations',
     label: 'Due Immunizations',
     icon: CalendarRange,
+    required: PermissionCode.MANAGE_IMMUNIZATION,
+  },
+  {
+    href: '/admin/reports',
+    label: 'Vaccination Reports',
+    icon: ChartColumnBig,
     required: PermissionCode.MANAGE_IMMUNIZATION,
   },
   {
