@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronRight,
   FileSpreadsheet,
+  Printer,
   Search,
   ShieldAlert,
   Syringe,
@@ -41,6 +42,10 @@ type FutureVaccinationRow = ChildReportRow & {
   nextScheduleLabel?: string | null;
 };
 
+type NotVaccinatedRow = ChildReportRow & {
+  pendingCount: number;
+};
+
 type VaccinationEvent = {
   recordId: number;
   childId: number;
@@ -67,7 +72,7 @@ type ReportData = {
   children: {
     vaccinated: ChildReportRow[];
     futureVaccination: FutureVaccinationRow[];
-    notVaccinated: Array<ChildReportRow & { pendingCount: number }>;
+    notVaccinated: NotVaccinatedRow[];
   };
   vaccinations: {
     week: VaccinationEvent[];
@@ -91,9 +96,293 @@ const PERIOD_TAB_LABELS: Record<PeriodTab, string> = {
   year: 'This Year',
 };
 
+const CHILD_TABLE_PAGE_SIZE = 10;
+const VACCINATION_TABLE_PAGE_SIZE = 10;
+
 function formatDate(value?: string | null) {
   if (!value) return '-';
   return new Date(value).toLocaleDateString();
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function paginateRows<T>(rows: T[], page: number, pageSize: number) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const start = (safePage - 1) * pageSize;
+
+  return {
+    rows: rows.slice(start, start + pageSize),
+    page: safePage,
+    totalPages,
+    total: rows.length,
+  };
+}
+
+function buildPrintDocument({
+  title,
+  subtitle,
+  generatedAt,
+  search,
+  page,
+  totalPages,
+  rowCount,
+  tableHtml,
+}: {
+  title: string;
+  subtitle: string;
+  generatedAt: string;
+  search: string;
+  page: number;
+  totalPages: number;
+  rowCount: number;
+  tableHtml: string;
+}) {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+          }
+
+          @page {
+            size: A4 portrait;
+            margin: 12mm;
+          }
+
+          .print-shell {
+            width: 100%;
+          }
+
+          .print-header {
+            border-bottom: 2px solid #1e293b;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+          }
+
+          .print-eyebrow {
+            margin: 0;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #64748b;
+          }
+
+          .print-title {
+            margin: 6px 0 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+          }
+
+          .print-subtitle {
+            margin: 4px 0 0;
+            font-size: 14px;
+            color: #475569;
+          }
+
+          .print-meta {
+            display: grid;
+            gap: 6px;
+            margin: 14px 0 18px;
+            font-size: 12px;
+            color: #334155;
+          }
+
+          .print-meta strong {
+            color: #0f172a;
+          }
+
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            line-height: 1.35;
+          }
+
+          .print-table th,
+          .print-table td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+          }
+
+          .print-table thead {
+            display: table-header-group;
+          }
+
+          .print-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+          }
+
+          .print-table tr {
+            break-inside: avoid;
+          }
+
+          .print-muted {
+            font-size: 11px;
+            color: #64748b;
+          }
+
+          .print-badge {
+            display: inline-block;
+            border-radius: 999px;
+            background: #fff1f2;
+            color: #be123c;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-shell">
+          <header class="print-header">
+            <p class="print-eyebrow">Health Center System</p>
+            <h1 class="print-title">${escapeHtml(title)}</h1>
+            <p class="print-subtitle">${escapeHtml(subtitle)}</p>
+          </header>
+          <section class="print-meta">
+            <div><strong>Generated:</strong> ${escapeHtml(generatedAt)}</div>
+            <div><strong>Search filter:</strong> ${escapeHtml(search || 'All records')}</div>
+            <div><strong>Page:</strong> ${page} of ${totalPages}</div>
+            <div><strong>Rows on this page:</strong> ${rowCount}</div>
+          </section>
+          ${tableHtml}
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+function buildChildTableHtml(
+  rows: Array<ChildReportRow | FutureVaccinationRow | NotVaccinatedRow>,
+  childTab: ChildTab
+) {
+  const progressHeader = childTab === 'futureVaccination' ? 'Next schedule' : 'Progress';
+  const lastHeader = childTab === 'notVaccinated' ? 'Pending doses' : 'Last vaccine';
+
+  const body =
+    rows.length === 0
+      ? `<tr><td colspan="4">No child records found for this report section.</td></tr>`
+      : rows
+          .map(row => {
+            const childMeta = `${row.gender === 'MALE' ? 'Male' : 'Female'} | Born ${formatDate(row.birthDate)}`;
+            const locationMeta =
+              [row.barangay, row.healthCenter].filter(Boolean).join(' | ') || 'No location set';
+
+            const progressCell =
+              childTab === 'futureVaccination'
+                ? `<div><strong>${escapeHtml((row as FutureVaccinationRow).nextVaccineName)}</strong></div><div class="print-muted">${escapeHtml((row as FutureVaccinationRow).nextDose)}${
+                    (row as FutureVaccinationRow).nextScheduleLabel
+                      ? ` | ${escapeHtml((row as FutureVaccinationRow).nextScheduleLabel || '')}`
+                      : ''
+                  } | ${escapeHtml(formatDate((row as FutureVaccinationRow).nextDueDate))}</div>`
+                : `<div><strong>${escapeHtml(String(row.completionRate))}% complete</strong></div><div class="print-muted">${escapeHtml(
+                    `${row.totalCompleted} of ${row.totalRequired} doses completed`
+                  )}</div>`;
+
+            const lastCell =
+              childTab === 'notVaccinated'
+                ? `<span class="print-badge">${escapeHtml(String((row as NotVaccinatedRow).pendingCount))} pending</span>`
+                : escapeHtml(formatDate(row.lastVaccinatedAt));
+
+            return `
+              <tr>
+                <td>
+                  <div><strong>${escapeHtml(row.childName)}</strong></div>
+                  <div class="print-muted">${escapeHtml(childMeta)}</div>
+                </td>
+                <td>
+                  <div>${escapeHtml(row.parentName || '-')}</div>
+                  <div class="print-muted">${escapeHtml(locationMeta)}</div>
+                </td>
+                <td>${progressCell}</td>
+                <td>${lastCell}</td>
+              </tr>
+            `;
+          })
+          .join('');
+
+  return `
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Child</th>
+          <th>Parent</th>
+          <th>${escapeHtml(progressHeader)}</th>
+          <th>${escapeHtml(lastHeader)}</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+}
+
+function buildVaccinationTableHtml(rows: VaccinationEvent[]) {
+  const body =
+    rows.length === 0
+      ? `<tr><td colspan="5">No completed vaccinations recorded for this period.</td></tr>`
+      : rows
+          .map(
+            row => `
+              <tr>
+                <td><strong>${escapeHtml(row.childName)}</strong></td>
+                <td>${escapeHtml(row.parentName || '-')}</td>
+                <td>
+                  <div><strong>${escapeHtml(row.vaccineName)}</strong></div>
+                  <div class="print-muted">${escapeHtml(row.vaccineCode)}</div>
+                </td>
+                <td>
+                  <div>${escapeHtml(row.dose)}</div>
+                  <div class="print-muted">${escapeHtml(row.scheduleLabel || '-')}</div>
+                </td>
+                <td>${escapeHtml(formatDate(row.dateGiven))}</td>
+              </tr>
+            `
+          )
+          .join('');
+
+  return `
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Child</th>
+          <th>Parent</th>
+          <th>Vaccine</th>
+          <th>Dose</th>
+          <th>Date given</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
 }
 
 function ReportsPageContent() {
@@ -103,6 +392,8 @@ function ReportsPageContent() {
   const [search, setSearch] = useState('');
   const [childTab, setChildTab] = useState<ChildTab>('vaccinated');
   const [periodTab, setPeriodTab] = useState<PeriodTab>('month');
+  const [childPage, setChildPage] = useState(1);
+  const [vaccinationPage, setVaccinationPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search, 350);
 
   useEffect(() => {
@@ -132,6 +423,85 @@ function ReportsPageContent() {
     if (!report) return [];
     return report.vaccinations[periodTab] || [];
   }, [periodTab, report]);
+
+  const childPagination = useMemo(
+    () => paginateRows(childRows, childPage, CHILD_TABLE_PAGE_SIZE),
+    [childPage, childRows]
+  );
+
+  const vaccinationPagination = useMemo(
+    () => paginateRows(vaccinationRows, vaccinationPage, VACCINATION_TABLE_PAGE_SIZE),
+    [vaccinationPage, vaccinationRows]
+  );
+
+  const activeChildTabLabel = CHILD_TAB_LABELS[childTab];
+  const activePeriodTabLabel = PERIOD_TAB_LABELS[periodTab];
+
+  useEffect(() => {
+    document.title = `Vaccination Reports - ${activeChildTabLabel} - ${activePeriodTabLabel}`;
+  }, [activeChildTabLabel, activePeriodTabLabel]);
+
+  useEffect(() => {
+    setChildPage(1);
+  }, [childTab, debouncedSearch]);
+
+  useEffect(() => {
+    setVaccinationPage(1);
+  }, [periodTab, debouncedSearch]);
+
+  const openPrintWindow = (documentHtml: string) => {
+    const printWindow = window.open('', '_blank', 'width=1024,height=768');
+
+    if (!printWindow) {
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(documentHtml);
+    printWindow.document.close();
+
+    const finalizePrint = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+
+    if (printWindow.document.readyState === 'complete') {
+      window.setTimeout(finalizePrint, 150);
+    } else {
+      printWindow.onload = () => window.setTimeout(finalizePrint, 150);
+    }
+  };
+
+  const handlePrintChildTable = () => {
+    openPrintWindow(
+      buildPrintDocument({
+        title: `${activeChildTabLabel} Table`,
+        subtitle: 'Child vaccination status report',
+        generatedAt: new Date(report?.generatedAt || new Date()).toLocaleString(),
+        search: search.trim(),
+        page: childPagination.page,
+        totalPages: childPagination.totalPages,
+        rowCount: childPagination.rows.length,
+        tableHtml: buildChildTableHtml(childPagination.rows, childTab),
+      })
+    );
+  };
+
+  const handlePrintVaccinationTable = () => {
+    openPrintWindow(
+      buildPrintDocument({
+        title: `${activePeriodTabLabel} Completed Vaccinations`,
+        subtitle: 'Completed vaccination history',
+        generatedAt: new Date(report?.generatedAt || new Date()).toLocaleString(),
+        search: search.trim(),
+        page: vaccinationPagination.page,
+        totalPages: vaccinationPagination.totalPages,
+        rowCount: vaccinationPagination.rows.length,
+        tableHtml: buildVaccinationTableHtml(vaccinationPagination.rows),
+      })
+    );
+  };
 
   if (loading) {
     return <TablePageSkeleton columns={5} rows={6} showHeaderAction={false} />;
@@ -186,7 +556,7 @@ function ReportsPageContent() {
         <SummaryCard
           label="Vaccinations this month"
           value={report.summary.vaccinationsThisMonth}
-          detail={`${report.summary.vaccinationsThisWeek} this week • ${report.summary.vaccinationsThisYear} this year`}
+          detail={`${report.summary.vaccinationsThisWeek} this week | ${report.summary.vaccinationsThisYear} this year`}
           tone="amber"
           icon={<Syringe className="h-5 w-5" />}
         />
@@ -223,7 +593,7 @@ function ReportsPageContent() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {(Object.keys(CHILD_TAB_LABELS) as ChildTab[]).map(tab => (
                 <button
                   key={tab}
@@ -238,99 +608,40 @@ function ReportsPageContent() {
                   {CHILD_TAB_LABELS[tab]}
                 </button>
               ))}
+
+              <button
+                type="button"
+                onClick={handlePrintChildTable}
+                disabled={childPagination.rows.length === 0}
+                className="inline-flex items-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                <Printer className="h-4 w-4" />
+                Print This Table
+              </button>
             </div>
           </div>
 
           <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    <th className="px-5 py-3 text-left font-medium">Child</th>
-                    <th className="px-5 py-3 text-left font-medium">Parent</th>
-                    <th className="px-5 py-3 text-left font-medium">
-                      {childTab === 'futureVaccination' ? 'Next schedule' : 'Progress'}
-                    </th>
-                    <th className="px-5 py-3 text-left font-medium">
-                      {childTab === 'notVaccinated' ? 'Pending doses' : 'Last vaccine'}
-                    </th>
-                    <th className="px-5 py-3 text-right font-medium">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {childRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-14 text-center text-slate-500">
-                        No child records found for this report section.
-                      </td>
-                    </tr>
-                  ) : (
-                    childRows.map(row => (
-                      <tr key={row.childId} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-5 py-4">
-                          <div className="font-semibold text-slate-900">{row.childName}</div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {row.gender === 'MALE' ? 'Male' : 'Female'} • Born {formatDate(row.birthDate)}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-slate-700">
-                          <div>{row.parentName || '-'}</div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {[row.barangay, row.healthCenter].filter(Boolean).join(' • ') || 'No location set'}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-slate-700">
-                          {childTab === 'futureVaccination' ? (
-                            <div>
-                              <div className="font-medium text-slate-900">
-                                {(row as FutureVaccinationRow).nextVaccineName}
-                              </div>
-                              <div className="mt-1 text-xs text-slate-500">
-                                {(row as FutureVaccinationRow).nextDose}
-                                {(row as FutureVaccinationRow).nextScheduleLabel
-                                  ? ` • ${(row as FutureVaccinationRow).nextScheduleLabel}`
-                                  : ''}
-                                {' • '}
-                                {formatDate((row as FutureVaccinationRow).nextDueDate)}
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="font-medium text-slate-900">{row.completionRate}% complete</div>
-                              <div className="mt-1 text-xs text-slate-500">
-                                {row.totalCompleted} of {row.totalRequired} doses completed
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-slate-700">
-                          {childTab === 'notVaccinated' ? (
-                            <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                              {(row as ChildReportRow & { pendingCount: number }).pendingCount} pending
-                            </span>
-                          ) : (
-                            formatDate(row.lastVaccinatedAt)
-                          )}
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex justify-end">
-                            <button
-                              type="button"
-                              onClick={() => router.push(`/admin/child-records?childId=${row.childId}`)}
-                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                            >
-                              Open
-                              <ChevronRight className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              <ChildStatusTable
+                rows={childPagination.rows}
+                childTab={childTab}
+                showActions
+                onOpenChild={childId => router.push(`/admin/child-records?childId=${childId}`)}
+              />
             </div>
           </div>
+
+          <PaginationBar
+            page={childPagination.page}
+            totalPages={childPagination.totalPages}
+            total={childPagination.total}
+            pageSize={CHILD_TABLE_PAGE_SIZE}
+            onPrevious={() => setChildPage(current => Math.max(1, current - 1))}
+            onNext={() =>
+              setChildPage(current => Math.min(childPagination.totalPages, current + 1))
+            }
+          />
         </div>
 
         <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5">
@@ -377,7 +688,7 @@ function ReportsPageContent() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(Object.keys(PERIOD_TAB_LABELS) as PeriodTab[]).map(tab => (
               <button
                 key={tab}
@@ -392,64 +703,220 @@ function ReportsPageContent() {
                 {PERIOD_TAB_LABELS[tab]}
               </button>
             ))}
+
+            <button
+              type="button"
+              onClick={handlePrintVaccinationTable}
+              disabled={vaccinationPagination.rows.length === 0}
+              className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              <Printer className="h-4 w-4" />
+              Print This Table
+            </button>
           </div>
         </div>
 
         <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500">
-                <tr>
-                  <th className="px-5 py-3 text-left font-medium">Child</th>
-                  <th className="px-5 py-3 text-left font-medium">Parent</th>
-                  <th className="px-5 py-3 text-left font-medium">Vaccine</th>
-                  <th className="px-5 py-3 text-left font-medium">Dose</th>
-                  <th className="px-5 py-3 text-left font-medium">Date given</th>
-                  <th className="px-5 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vaccinationRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-14 text-center text-slate-500">
-                      No completed vaccinations recorded for this period.
-                    </td>
-                  </tr>
-                ) : (
-                  vaccinationRows.map(row => (
-                    <tr key={row.recordId} className="border-t border-slate-100 hover:bg-slate-50">
-                      <td className="px-5 py-4 font-medium text-slate-900">{row.childName}</td>
-                      <td className="px-5 py-4 text-slate-700">{row.parentName || '-'}</td>
-                      <td className="px-5 py-4 text-slate-700">
-                        <div className="font-medium text-slate-900">{row.vaccineName}</div>
-                        <div className="mt-1 text-xs text-slate-500">{row.vaccineCode}</div>
-                      </td>
-                      <td className="px-5 py-4 text-slate-700">
-                        <div>{row.dose}</div>
-                        <div className="mt-1 text-xs text-slate-500">{row.scheduleLabel || '-'}</div>
-                      </td>
-                      <td className="px-5 py-4 text-slate-700">{formatDate(row.dateGiven)}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/admin/child-records?childId=${row.childId}`)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                          >
-                            View child
-                            <ChevronRight className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <VaccinationTable
+              rows={vaccinationPagination.rows}
+              showActions
+              onOpenChild={childId => router.push(`/admin/child-records?childId=${childId}`)}
+            />
           </div>
         </div>
+
+        <PaginationBar
+          page={vaccinationPagination.page}
+          totalPages={vaccinationPagination.totalPages}
+          total={vaccinationPagination.total}
+          pageSize={VACCINATION_TABLE_PAGE_SIZE}
+          onPrevious={() => setVaccinationPage(current => Math.max(1, current - 1))}
+          onNext={() =>
+            setVaccinationPage(current =>
+              Math.min(vaccinationPagination.totalPages, current + 1)
+            )
+          }
+        />
       </section>
     </div>
+  );
+}
+
+function ChildStatusTable({
+  rows,
+  childTab,
+  showActions,
+  onOpenChild,
+}: {
+  rows: Array<ChildReportRow | FutureVaccinationRow | NotVaccinatedRow>;
+  childTab: ChildTab;
+  showActions: boolean;
+  onOpenChild?: (childId: number) => void;
+}) {
+  const columnCount = showActions ? 5 : 4;
+
+  return (
+    <table className="min-w-full text-sm">
+      <thead className="bg-slate-50 text-slate-500">
+        <tr>
+          <th className="px-5 py-3 text-left font-medium">Child</th>
+          <th className="px-5 py-3 text-left font-medium">Parent</th>
+          <th className="px-5 py-3 text-left font-medium">
+            {childTab === 'futureVaccination' ? 'Next schedule' : 'Progress'}
+          </th>
+          <th className="px-5 py-3 text-left font-medium">
+            {childTab === 'notVaccinated' ? 'Pending doses' : 'Last vaccine'}
+          </th>
+          {showActions ? (
+            <th className="px-5 py-3 text-right font-medium">Action</th>
+          ) : null}
+        </tr>
+      </thead>
+
+      <tbody>
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={columnCount} className="px-5 py-14 text-center text-slate-500">
+              No child records found for this report section.
+            </td>
+          </tr>
+        ) : (
+          rows.map(row => (
+            <tr key={row.childId} className="border-t border-slate-100 hover:bg-slate-50">
+              <td className="px-5 py-4">
+                <div className="font-semibold text-slate-900">{row.childName}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {row.gender === 'MALE' ? 'Male' : 'Female'} | Born {formatDate(row.birthDate)}
+                </div>
+              </td>
+              <td className="px-5 py-4 text-slate-700">
+                <div>{row.parentName || '-'}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {[row.barangay, row.healthCenter].filter(Boolean).join(' | ') || 'No location set'}
+                </div>
+              </td>
+              <td className="px-5 py-4 text-slate-700">
+                {childTab === 'futureVaccination' ? (
+                  <div>
+                    <div className="font-medium text-slate-900">
+                      {(row as FutureVaccinationRow).nextVaccineName}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {(row as FutureVaccinationRow).nextDose}
+                      {(row as FutureVaccinationRow).nextScheduleLabel
+                        ? ` | ${(row as FutureVaccinationRow).nextScheduleLabel}`
+                        : ''}
+                      {' | '}
+                      {formatDate((row as FutureVaccinationRow).nextDueDate)}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="font-medium text-slate-900">{row.completionRate}% complete</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {row.totalCompleted} of {row.totalRequired} doses completed
+                    </div>
+                  </div>
+                )}
+              </td>
+              <td className="px-5 py-4 text-slate-700">
+                {childTab === 'notVaccinated' ? (
+                  <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                    {(row as NotVaccinatedRow).pendingCount} pending
+                  </span>
+                ) : (
+                  formatDate(row.lastVaccinatedAt)
+                )}
+              </td>
+              {showActions ? (
+                <td className="px-5 py-4">
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => onOpenChild?.(row.childId)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Open
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              ) : null}
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  );
+}
+
+function VaccinationTable({
+  rows,
+  showActions,
+  onOpenChild,
+}: {
+  rows: VaccinationEvent[];
+  showActions: boolean;
+  onOpenChild?: (childId: number) => void;
+}) {
+  const columnCount = showActions ? 6 : 5;
+
+  return (
+    <table className="min-w-full text-sm">
+      <thead className="bg-slate-50 text-slate-500">
+        <tr>
+          <th className="px-5 py-3 text-left font-medium">Child</th>
+          <th className="px-5 py-3 text-left font-medium">Parent</th>
+          <th className="px-5 py-3 text-left font-medium">Vaccine</th>
+          <th className="px-5 py-3 text-left font-medium">Dose</th>
+          <th className="px-5 py-3 text-left font-medium">Date given</th>
+          {showActions ? (
+            <th className="px-5 py-3 text-right font-medium">Action</th>
+          ) : null}
+        </tr>
+      </thead>
+
+      <tbody>
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={columnCount} className="px-5 py-14 text-center text-slate-500">
+              No completed vaccinations recorded for this period.
+            </td>
+          </tr>
+        ) : (
+          rows.map(row => (
+            <tr key={row.recordId} className="border-t border-slate-100 hover:bg-slate-50">
+              <td className="px-5 py-4 font-medium text-slate-900">{row.childName}</td>
+              <td className="px-5 py-4 text-slate-700">{row.parentName || '-'}</td>
+              <td className="px-5 py-4 text-slate-700">
+                <div className="font-medium text-slate-900">{row.vaccineName}</div>
+                <div className="mt-1 text-xs text-slate-500">{row.vaccineCode}</div>
+              </td>
+              <td className="px-5 py-4 text-slate-700">
+                <div>{row.dose}</div>
+                <div className="mt-1 text-xs text-slate-500">{row.scheduleLabel || '-'}</div>
+              </td>
+              <td className="px-5 py-4 text-slate-700">{formatDate(row.dateGiven)}</td>
+              {showActions ? (
+                <td className="px-5 py-4">
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => onOpenChild?.(row.childId)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    >
+                      View child
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              ) : null}
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
   );
 }
 
@@ -499,6 +966,55 @@ function GuideCard({
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
       <p className="mt-1 text-sm text-slate-500">{body}</p>
     </article>
+  );
+}
+
+function PaginationBar({
+  page,
+  totalPages,
+  total,
+  pageSize,
+  onPrevious,
+  onNext,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageSize: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endItem = Math.min(page * pageSize, total);
+
+  return (
+    <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+      <span>
+        Showing {startItem}-{endItem} of {total} records
+      </span>
+
+      <div className="flex items-center gap-2">
+        <span>
+          Page {page} of {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={page === 1}
+          onClick={onPrevious}
+          className="rounded-xl bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={page === totalPages}
+          onClick={onNext}
+          className="rounded-xl bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+    </div>
   );
 }
 

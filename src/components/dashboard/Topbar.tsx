@@ -81,6 +81,7 @@ export default function Topbar({
         bg-white/70
         border-b border-white/30
         shadow-[0_8px_30px_rgba(0,0,0,0.06)]
+        print:hidden
       "
     >
       {/* ================= LEFT ================= */}

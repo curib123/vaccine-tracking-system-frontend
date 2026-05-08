@@ -279,7 +279,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         </nav>
 
         {/* ================= LOGOUT ================= */}
-        <div className="px-6 pb-8">
+        <div className="px-6 pb-8 print:hidden">
           <button
             onClick={logout}
             className="
